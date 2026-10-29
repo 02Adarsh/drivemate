@@ -58,8 +58,7 @@ void routeAfterAuth(BuildContext context, Map<String, dynamic> payload) {
       (payload['user'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
   final driver = (payload['driver'] as Map?)?.cast<String, dynamic>();
   final role = (user['role'] ?? 'CUSTOMER').toString();
-  final nextStep =
-      (user['next_step'] ?? driver?['next_step'] ?? 'DASHBOARD').toString();
+  final nextStep = (user['next_step'] ?? driver?['next_step'] ?? '').toString();
   final name = (user['name'] ?? 'there').toString();
 
   if (role == 'DRIVER') {
@@ -78,8 +77,11 @@ void routeAfterAuth(BuildContext context, Map<String, dynamic> payload) {
       case 'SUSPENDED':
         pushClean(context, DriverApplicationStatusScreen(name: name));
         return;
-      default:
+      case 'DASHBOARD':
         pushClean(context, HomeScreen(role: 'Driver', name: name));
+        return;
+      default:
+        pushClean(context, DriverPersonalProfileScreen(name: name));
         return;
     }
   }
@@ -89,10 +91,10 @@ void routeAfterAuth(BuildContext context, Map<String, dynamic> payload) {
     return;
   }
 
-  if (nextStep == 'PROFILE') {
-    pushClean(context, ProfileSetupScreen(name: name, role: 'CUSTOMER'));
-  } else {
+  if (nextStep == 'DASHBOARD') {
     pushClean(context, HomeScreen(role: 'Customer', name: name));
+  } else {
+    pushClean(context, ProfileSetupScreen(name: name, role: 'CUSTOMER'));
   }
 }
 

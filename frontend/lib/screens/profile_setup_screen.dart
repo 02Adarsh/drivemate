@@ -141,11 +141,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       }, step: 'PROFILE');
       if (!mounted) return;
       final complete = result['profile_complete'] == true;
-      showDmMessage(
-          context,
-          complete
-              ? 'Profile complete. Welcome to DriveMate!'
-              : 'Profile saved.');
+      if (!complete) {
+        showDmMessage(context, 'Complete all profile details to continue.',
+            error: true);
+        return;
+      }
+      showDmMessage(context, 'Profile complete. Welcome to DriveMate!');
       pushClean(context, HomeScreen(role: 'Customer', name: widget.name));
     } on ApiException catch (error) {
       if (!mounted) return;

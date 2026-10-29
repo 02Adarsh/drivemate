@@ -8,7 +8,7 @@ import '../theme/dm_theme.dart';
 import '../widgets/auth_backdrop.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/dm_buttons.dart';
-import 'home_screen.dart';
+import 'session_resume_screen.dart';
 import 'onboarding_screen.dart';
 
 /// Branded launch screen. After the animation it either resumes an existing
@@ -50,27 +50,11 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _next() async {
-    final user = await AuthService.cachedUser();
     final hasSession = await AuthService.hasSession();
     if (!mounted) return;
-    if (user != null && hasSession) {
-      final role = (user['role'] ?? 'CUSTOMER').toString();
-      final name = (user['name'] ?? 'there').toString();
-      Navigator.of(context).pushReplacement(
-        dmRoute(
-          HomeScreen(
-            role: role == 'DRIVER'
-                ? 'Driver'
-                : role == 'ADMIN'
-                    ? 'Admin'
-                    : 'Customer',
-            name: name,
-          ),
-        ),
-      );
-      return;
-    }
-    Navigator.of(context).pushReplacement(dmRoute(const OnboardingScreen()));
+    Navigator.of(context).pushReplacement(dmRoute(
+      hasSession ? const SessionResumeScreen() : const OnboardingScreen(),
+    ));
   }
 
   @override

@@ -12,6 +12,7 @@ import 'driver_documents_screen.dart';
 import 'driver_driving_details_screen.dart';
 import 'driver_personal_profile_screen.dart';
 import 'home_screen.dart';
+import 'login_screen.dart';
 
 /// DRIVER REGISTRATION - STEP 5 of 5: admin verification status.
 ///
@@ -135,10 +136,15 @@ class _DriverApplicationStatusScreenState
 
     return DmScreen(
       showBack: true,
-      // After approval (or when the stack was cleared) the dashboard is the
-      // right place to land, so the arrow never leads to a dead end.
-      onBack: () =>
-          pushClean(context, HomeScreen(role: 'Driver', name: widget.name)),
+      // Only approved applications may enter the dashboard. Otherwise return
+      // to the application rather than bypassing the remaining steps.
+      onBack: () {
+        if (_status == 'APPROVED') {
+          pushClean(context, HomeScreen(role: 'Driver', name: widget.name));
+        } else {
+          pushClean(context, const LoginScreen(role: 'DRIVER'));
+        }
+      },
       child: RefreshIndicator(
         onRefresh: _load,
         color: red,

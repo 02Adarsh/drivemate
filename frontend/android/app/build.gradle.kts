@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+
+// Local signing information is intentionally kept out of Git and the ZIP.
+val releaseProperties = Properties()
+val releasePropertiesFile = rootProject.file("key.properties")
+if (releasePropertiesFile.exists()) {
+    releasePropertiesFile.inputStream().use { releaseProperties.load(it) }
 }
 
 android {
@@ -27,13 +37,27 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Release/profile disallow cleartext; debug USB/LAN development opts in.
+        manifestPlaceholders["allowCleartext"] = "false"
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = releaseProperties.getProperty("keyAlias")
+            keyPassword = releaseProperties.getProperty("keyPassword")
+            storeFile = releaseProperties.getProperty("storeFile")?.let { file(it) }
+            storePassword = releaseProperties.getProperty("storePassword")
+        }
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["allowCleartext"] = "true"
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // No fallback to debug signing: release requires the user's key.
+            signingConfig = signingConfigs.getByName("release")
+            manifestPlaceholders["allowCleartext"] = "false"
         }
     }
 }

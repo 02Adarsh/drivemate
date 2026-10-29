@@ -11,15 +11,8 @@
         android:label="DriveMate"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
-        <!--
-            usesCleartextTraffic is enabled so a phone can reach the Django
-            development server over plain HTTP on your local network
-            (for example http://192.168.1.20:8000).
-
-            BEFORE PUBLISHING: serve the API over HTTPS and remove this line
-            (or add a network security config that only allows your dev host).
-        -->
+        android:usesCleartextTraffic="${allowCleartext}">
+        <!-- HTTP is enabled only for debug builds. Release uses HTTPS. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

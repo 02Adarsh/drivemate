@@ -86,9 +86,9 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
   String? _licenceExpiry;
 
   /// document_type -> uploaded document record from the server
-  final Map<String, Map<String, dynamic>> _uploaded = const {};
-  final Map<String, Map<String, dynamic>> _training = const {};
-  final Set<String> _busyDocuments = const {};
+  final Map<String, Map<String, dynamic>> _uploaded = {};
+  final Map<String, Map<String, dynamic>> _training = {};
+  final Set<String> _busyDocuments = {};
 
   bool _consentBackgroundCheck = false;
   bool _consentTerms = false;
