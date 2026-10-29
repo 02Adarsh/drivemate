@@ -1,0 +1,22 @@
+name: DriveMate health check
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check the public Render health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            --connect-timeout 15 --max-time 90 --retry 1 --retry-delay 5 \
+            https://drivemate-api-02adarsh.onrender.com/api/health/ | \
+            python3 -c 'import json, sys; d = json.load(sys.stdin); assert d.get("status") == "ok" and d.get("service") == "drivemate-api", "Unexpected health response"; print("DriveMate health check OK")'
