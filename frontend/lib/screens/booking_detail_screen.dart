@@ -390,7 +390,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen>
                             ])),
                     if (b.isDemo) ...[
                       const SizedBox(height: 10),
-                      const DmDemoBadge(text: 'SAMPLE BOOKING • NOT A REAL TRIP')
+                      const DmDemoBadge(
+                          text: 'SAMPLE BOOKING • NOT A REAL TRIP')
                     ],
                     if (_error != null) ...[
                       const SizedBox(height: 12),
@@ -520,6 +521,22 @@ class _BookingDetailScreenState extends State<BookingDetailScreen>
                               value: b.scheduledAt == null
                                   ? 'As soon as available'
                                   : _time(b.scheduledAt)),
+                          if (b.service == 'GETAWAY') ...[
+                            DmInfoRow(
+                                label: 'Return',
+                                value: formatRideDateTime(b.returnAt),
+                                icon: Icons.event_available),
+                            DmInfoRow(
+                                label: 'Driver hours',
+                                value: '${b.durationHours} hours',
+                                icon: Icons.timer_outlined),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                  'Fuel, tolls, parking and driver stay/food are paid separately by the customer.',
+                                  style: dmCaption(size: 11)),
+                            ),
+                          ],
                           if (b.vehicle != null)
                             DmInfoRow(
                                 label: 'Your car',

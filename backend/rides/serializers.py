@@ -1,12 +1,13 @@
 """Strict input validation. Prices and roles are never accepted from clients."""
 import re
 from datetime import timedelta
+from math import ceil
 
 from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Booking, Vehicle, normalise_registration
-from .pricing import MAX_HOURS, SERVICE_PRICING
+from .pricing import MAX_HOURS, GETAWAY_MAX_HOURS, GETAWAY_MAX_DAYS, SERVICE_PRICING
 
 
 class VehicleInputSerializer(serializers.Serializer):
@@ -30,11 +31,12 @@ class VehicleInputSerializer(serializers.Serializer):
 class BookingInputSerializer(serializers.Serializer):
     vehicle_id = serializers.IntegerField(min_value=1)
     service = serializers.ChoiceField(choices=Booking.Service.choices)
-    duration_hours = serializers.IntegerField(min_value=1, max_value=MAX_HOURS)
+    duration_hours = serializers.IntegerField(min_value=1, max_value=GETAWAY_MAX_HOURS)
     pickup = serializers.CharField(min_length=4, max_length=240)
     drop_address = serializers.CharField(max_length=240, allow_blank=True, default='')
     notes = serializers.CharField(max_length=500, allow_blank=True, default='')
     scheduled_at = serializers.DateTimeField(required=False, allow_null=True)
+    return_at = serializers.DateTimeField(required=False, allow_null=True)
     request_key = serializers.CharField(max_length=64, required=False, allow_blank=True)
     pickup_latitude = serializers.DecimalField(max_digits=10, decimal_places=7, min_value=-90, max_value=90)
     pickup_longitude = serializers.DecimalField(max_digits=10, decimal_places=7, min_value=-180, max_value=180)
@@ -65,10 +67,26 @@ class BookingInputSerializer(serializers.Serializer):
         if phone and not re.fullmatch(r'\+?[0-9]{10,15}',phone):
             raise serializers.ValidationError({'passenger_phone':'Enter a complete mobile number.'})
         service = data['service']
+        if service == Booking.Service.GETAWAY:
+            start, end = data.get('scheduled_at'), data.get('return_at')
+            if not start or not end:
+                raise serializers.ValidationError({'return_at': 'Choose both getaway start and return date/time.'})
+            local_start = timezone.localtime(start)
+            local_end = timezone.localtime(end)
+            if end <= start or local_end.date() <= local_start.date():
+                raise serializers.ValidationError({'return_at': 'Return must be on a later day than the start.'})
+            if end - start > timedelta(days=GETAWAY_MAX_DAYS):
+                raise serializers.ValidationError({'return_at': 'Getaways can be up to 31 days long.'})
+            if data['duration_hours'] > ceil((end - start).total_seconds() / 3600):
+                raise serializers.ValidationError({'duration_hours': 'Driver hours cannot exceed the trip duration.'})
+        elif data['duration_hours'] > MAX_HOURS:
+            raise serializers.ValidationError({'duration_hours': f'{MAX_HOURS} hours maximum for this service.'})
+        elif data.get('return_at') is not None:
+            raise serializers.ValidationError({'return_at': 'Return date applies only to Outstation Getaways.'})
         minimum = SERVICE_PRICING[service]['min_hours']
         if data['duration_hours'] < minimum:
             raise serializers.ValidationError({'duration_hours': f'{minimum} hours minimum for this service.'})
-        if service == Booking.Service.OUTSTATION and (len(data['drop_address']) < 4 or data.get('drop_latitude') is None or data.get('drop_longitude') is None):
+        if service in (Booking.Service.OUTSTATION, Booking.Service.GETAWAY) and (len(data['drop_address']) < 4 or data.get('drop_latitude') is None or data.get('drop_longitude') is None):
             raise serializers.ValidationError({'drop_address': 'Enter the outstation destination.'})
         return data
 

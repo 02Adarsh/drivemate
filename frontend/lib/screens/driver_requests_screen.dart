@@ -379,6 +379,27 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
               label: 'Duration',
               value: '${booking.durationHours} hours',
               icon: Icons.timer_outlined),
+          if (booking.service == 'GETAWAY') ...[
+            Divider(color: dividerSoft, height: 14),
+            DmInfoRow(
+                label: 'Destination',
+                value: booking.dropAddress,
+                icon: Icons.flag_outlined),
+            Divider(color: dividerSoft, height: 14),
+            DmInfoRow(
+                label: 'Starts',
+                value: formatRideDateTime(booking.scheduledAt),
+                icon: Icons.event),
+            Divider(color: dividerSoft, height: 14),
+            DmInfoRow(
+                label: 'Return',
+                value: formatRideDateTime(booking.returnAt),
+                icon: Icons.event_available),
+            const SizedBox(height: 8),
+            Text(
+                'Fuel, tolls, parking and driver stay/food are paid separately by customer.',
+                style: dmCaption(size: 11)),
+          ],
           Divider(color: dividerSoft, height: 14),
           DmInfoRow(
             label: 'You earn',

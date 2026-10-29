@@ -18,7 +18,7 @@ from rest_framework.views import APIView
 from rest_framework.throttling import ScopedRateThrottle
 
 from accounts.models import DriverProfile, User
-from .models import Booking, BookingDecline, Notification, Vehicle, notify, notify_available_drivers
+from .models import Booking, BookingDecline, Notification, Vehicle, ServiceRate, notify, notify_available_drivers
 from .models import TripStartCode, TripRating
 from .trip_security import issue_start_code, check_start_code, email_start_code
 from .pricing import PLATFORM_FEE_PERCENT, SERVICE_PRICING, fare_breakdown, platform_fee
@@ -70,7 +70,7 @@ def eligible_requests(profile):
     if not profile.night_driving:
         qs = qs.exclude(service=Booking.Service.NIGHT)
     if not profile.outstation:
-        qs = qs.exclude(service=Booking.Service.OUTSTATION)
+        qs = qs.exclude(service__in=[Booking.Service.OUTSTATION, Booking.Service.GETAWAY])
     return qs.select_related('customer', 'driver', 'vehicle').prefetch_related('events')
 
 
@@ -111,7 +111,7 @@ def booking_payload(booking, *, viewer=None, offer=False):
     return {
         'id': booking.pk, 'status': booking.status, 'status_label': booking.get_status_display(),
         'service': booking.service, 'service_label': booking.get_service_display(),
-        'scheduled_at': booking.scheduled_at, 'duration_hours': booking.duration_hours,
+        'scheduled_at': booking.scheduled_at, 'return_at': booking.return_at, 'duration_hours': booking.duration_hours,
         'pickup': booking.pickup, 'drop_address': booking.drop_address, 'notes': booking.notes,
         'pickup_latitude':float(booking.pickup_latitude) if booking.pickup_latitude is not None else None,
         'pickup_longitude':float(booking.pickup_longitude) if booking.pickup_longitude is not None else None,
@@ -179,9 +179,11 @@ def notification_payload(item):
 
 class PricingView(RidesView):
     def get(self, request):
+        rates = {rate.service: rate.enabled for rate in ServiceRate.objects.all()}
         return Response({
             'services': [{**fare_breakdown(key, row['min_hours']), 'key': key}
-                         for key, row in SERVICE_PRICING.items()],
+                         for key, row in SERVICE_PRICING.items()
+                         if rates.get(key, key != 'GETAWAY')],
             'platform_fee_percent': PLATFORM_FEE_PERCENT,
             'currency': 'INR', 'payment_collection_live': False,
         })
@@ -322,7 +324,12 @@ class BookingListCreateView(RidesView):
                     business_label = business.company
                 booking = Booking(customer=request.user, vehicle=vehicle, business_label=business_label,
                                   vehicle_snapshot=vehicle_payload(vehicle), **data)
+                rate = ServiceRate.objects.select_for_update().filter(service=booking.service).first()
+                if (booking.service == Booking.Service.GETAWAY and rate is None) or (rate and not rate.enabled):
+                    raise ValidationError({'service': 'This service is not available. Please contact support.'})
                 booking.set_estimate()
+                if booking.estimated_fare > Decimal('9999999.99'):
+                    raise ValidationError({'duration_hours': 'The estimated fare exceeds the supported maximum.'})
                 claimed = None
                 if booking.promo_code:
                     from hub.models import PromoCode, ClaimedPromo

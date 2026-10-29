@@ -37,6 +37,12 @@ class ExploreScreen extends StatelessWidget {
       Icons.route_rounded
     ),
     (
+      'Outstation Getaways',
+      'Plan a multi-day trip with a driver for your own car.',
+      'assets/images/svc_outstation.jpg',
+      Icons.travel_explore_rounded
+    ),
+    (
       'Full day',
       'A longer driver package for your day.',
       'assets/images/svc_outstation.jpg',

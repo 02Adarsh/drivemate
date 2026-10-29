@@ -216,6 +216,62 @@ void main() {
     await disposeUi(tester);
   });
 
+  testWidgets('getaway stays unavailable until admin enables a rate',
+      (tester) async {
+    await screen(
+        tester,
+        const BookDriverScreen(
+            name: 'Adarsh', initialService: 'Outstation Getaways'));
+    expect(find.text('Unavailable — admin rate not set'), findsOneWidget);
+    expect(find.text('Service unavailable until admin enables its rate'),
+        findsOneWidget);
+    await disposeUi(tester);
+  });
+
+  testWidgets(
+      'getaway collects trip dates and driver hours, and submits return time',
+      (tester) async {
+    api.getawayEnabled = true;
+    api.cars = [carFixture()];
+    await screen(
+        tester,
+        const BookDriverScreen(
+            name: 'Adarsh', initialService: 'Outstation Getaways'));
+    await tap(tester, 'Continue');
+    expect(find.text('START DATE & TIME'), findsOneWidget);
+    expect(find.text('Return date & time'), findsOneWidget);
+    await tap(tester, 'Pick date & time');
+    await tap(tester, 'OK'); // start date
+    await tap(tester, 'OK'); // start time
+    await tap(tester, 'Return date & time');
+    await tap(tester, 'OK'); // next-day return date
+    await tap(tester, 'OK'); // return time
+    await tester.enterText(find.byType(TextFormField).last, '20');
+    await settle(tester);
+    await tap(tester, 'Continue');
+    await pickupPin(tester);
+    await tap(tester, 'Choose destination on map');
+    await tester.enterText(
+        find.byType(TextFormField).first, 'Sector 15 metro gate');
+    await settle(tester);
+    await tester.tap(find.byTooltip('Search places'));
+    await settle(tester);
+    await tester.tap(find.text('Sector 15, near the metro gate').first);
+    await settle(tester);
+    await tap(tester, 'Confirm location');
+    await tap(tester, 'Continue');
+    await tap(tester, 'Continue');
+    expect(find.text('₹2750'), findsWidgets);
+    await tap(tester, 'Request a driver');
+    await tap(tester, 'Send request to drivers');
+    expect(api.lastBookingPost!['service'], 'GETAWAY');
+    expect(api.lastBookingPost!['duration_hours'], 20);
+    expect(DateTime.tryParse(api.lastBookingPost!['scheduled_at']), isNotNull);
+    expect(DateTime.tryParse(api.lastBookingPost!['return_at']), isNotNull);
+    expect(api.lastBookingPost!.containsKey('estimated_fare'), isFalse);
+    await disposeUi(tester);
+  });
+
   testWidgets(
       'full-day duration respects the server minimum rather than a misleading two-hour quote',
       (tester) async {

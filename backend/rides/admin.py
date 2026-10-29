@@ -1,6 +1,7 @@
 """Django admin registration so staff can inspect bookings in the panel."""
 
 from django.contrib import admin
+from django import forms
 
 from .models import Booking, BookingDecline, BookingEvent, Notification, Vehicle, ServiceRate
 
@@ -55,9 +56,23 @@ class NotificationAdmin(admin.ModelAdmin):
 admin.site.register(BookingDecline)
 
 
+class ServiceRateForm(forms.ModelForm):
+    class Meta:
+        model = ServiceRate
+        fields = '__all__'
+
+    def clean(self):
+        data = super().clean()
+        if (self.instance.service == 'GETAWAY' and data.get('enabled')
+                and not data.get('base') and not data.get('per_hour')):
+            raise forms.ValidationError('Set a base or hourly rate before enabling Outstation Getaways.')
+        return data
+
+
 @admin.register(ServiceRate)
 class ServiceRateAdmin(admin.ModelAdmin):
-    list_display = ('service', 'base', 'per_hour', 'updated_at')
+    form = ServiceRateForm
+    list_display = ('service', 'base', 'per_hour', 'enabled', 'updated_at')
     readonly_fields = ('service', 'updated_at')
 
     def has_add_permission(self, request):

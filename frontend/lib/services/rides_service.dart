@@ -143,8 +143,16 @@ class BookingPerson {
       );
 }
 
+String formatRideDateTime(DateTime? value) {
+  if (value == null) return '—';
+  final t = value.toLocal();
+  return '${t.day}/${t.month}/${t.year} ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+}
+
 class BookingModel {
   final Map<String, dynamic> extra;
+  DateTime? get returnAt =>
+      DateTime.tryParse((extra['return_at'] ?? '').toString());
   final int id;
   final String status;
   final String statusLabel;
@@ -555,6 +563,7 @@ class RidesService {
     String dropAddress = '',
     String notes = '',
     DateTime? scheduledAt,
+    DateTime? returnAt,
     required int vehicleId,
     required String requestKey,
     double? pickupLatitude,
@@ -574,6 +583,7 @@ class RidesService {
       'notes': notes,
       if (scheduledAt != null)
         'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+      if (returnAt != null) 'return_at': returnAt.toUtc().toIso8601String(),
       'vehicle_id': vehicleId,
       'request_key': requestKey,
       if (pickupLatitude != null)

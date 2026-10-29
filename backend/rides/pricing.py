@@ -22,9 +22,13 @@ SERVICE_PRICING: dict[str, dict[str, object]] = {
     'AIRPORT': {'label': 'Airport', 'base': 149, 'per_hour': 139, 'min_hours': 2},
     'OUTSTATION': {'label': 'Outstation', 'base': 249, 'per_hour': 149, 'min_hours': 6},
     'NIGHT': {'label': 'Night drive', 'base': 129, 'per_hour': 139, 'min_hours': 2},
+    # Disabled until an administrator configures an explicit price.
+    'GETAWAY': {'label': 'Outstation Getaways', 'base': 0, 'per_hour': 0, 'min_hours': 1},
 }
 
 MAX_HOURS = 14
+GETAWAY_MAX_HOURS = 744
+GETAWAY_MAX_DAYS = 31
 
 
 def _rupees(value: Decimal) -> Decimal:
@@ -35,12 +39,12 @@ def service_label(service: str) -> str:
     return str(SERVICE_PRICING.get(service, SERVICE_PRICING['BOOK_NOW'])['label'])
 
 
-def clamp_hours(hours) -> int:
+def clamp_hours(hours, maximum=MAX_HOURS) -> int:
     try:
         value = int(hours)
     except (TypeError, ValueError):
         value = 1
-    return max(1, min(MAX_HOURS, value))
+    return max(1, min(maximum, value))
 
 
 def service_config(service: str) -> dict:
@@ -57,7 +61,7 @@ def service_config(service: str) -> dict:
 def estimate_fare(service: str, hours) -> Decimal:
     """Base + hourly rate for the requested duration."""
     config = service_config(service)
-    duration = clamp_hours(hours)
+    duration = clamp_hours(hours, GETAWAY_MAX_HOURS if service == 'GETAWAY' else MAX_HOURS)
     minimum = int(config['min_hours'])  # type: ignore[arg-type]
     billable = max(duration, minimum)
     total = Decimal(int(config['base'])) + Decimal(int(config['per_hour'])) * billable  # type: ignore[arg-type]
@@ -79,7 +83,7 @@ def platform_fee(fare, fee_percent: int = PLATFORM_FEE_PERCENT) -> Decimal:
 def fare_breakdown(service: str, hours) -> dict:
     """Everything the booking screen needs to explain the number it shows."""
     config = service_config(service)
-    duration = clamp_hours(hours)
+    duration = clamp_hours(hours, GETAWAY_MAX_HOURS if service == 'GETAWAY' else MAX_HOURS)
     minimum = int(config['min_hours'])  # type: ignore[arg-type]
     billable = max(duration, minimum)
     total = estimate_fare(service, duration)

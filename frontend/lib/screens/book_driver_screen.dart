@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
 import '../services/hub_service.dart';
@@ -55,6 +56,12 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         'assets/images/svc_hourly.jpg', Icons.timer_outlined),
     const _BookingService('OUTSTATION', 'Outstation', 'One way or round trip',
         'assets/images/svc_outstation.jpg', Icons.route_rounded),
+    const _BookingService(
+        'GETAWAY',
+        'Outstation Getaways',
+        'Multi-day driver for your own car',
+        'assets/images/svc_outstation.jpg',
+        Icons.travel_explore_rounded),
     const _BookingService('FULL_DAY', 'Full day', 'Up to 12 hours',
         'assets/images/svc_outstation.jpg', Icons.wb_sunny_outlined),
     const _BookingService('NIGHT', 'Night drive', '10 pm – 6 am',
@@ -72,6 +79,8 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   int _durationIndex = 2;
   bool _scheduleLater = false;
   DateTime? _when;
+  DateTime? _returnAt;
+  final _getawayHours = TextEditingController(text: '8');
   final _pickup = TextEditingController();
   final _drop = TextEditingController();
   final _notes = TextEditingController();
@@ -92,6 +101,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   final String _requestKey = RidesService.newRequestKey();
 
   _BookingService get _service => _services[_serviceIndex];
+  bool get _isGetaway => _service.key == 'GETAWAY';
 
   @override
   void initState() {
@@ -101,6 +111,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       final index = _services.indexWhere(
           (service) => service.label.toLowerCase() == initial.toLowerCase());
       if (index >= 0) _serviceIndex = index;
+      if (_isGetaway) _scheduleLater = true;
     }
     _pickupPlace = widget.initialPickup;
     if (_pickupPlace != null) _pickup.text = _pickupPlace!.address;
@@ -114,6 +125,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     _pickup.dispose();
     _drop.dispose();
     _notes.dispose();
+    _getawayHours.dispose();
     super.dispose();
   }
 
@@ -193,7 +205,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   }
 
   /// Hours for the selected duration chip.
-  int get _hours => _durations[_durationIndex];
+  int get _hours => _isGetaway
+      ? (int.tryParse(_getawayHours.text) ?? 0)
+      : _durations[_durationIndex];
 
   /// Fare for the current choices, from the server pricing table.
   int? get _estimate {
@@ -201,7 +215,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       (item) => item['service'] == _service.key,
       orElse: () => {},
     );
-    if (row.isEmpty) return null;
+    if (row.isEmpty || _hours < 1 || (_isGetaway && _hours > 744)) return null;
     final base = (row['base'] as num?)?.toInt() ?? 0;
     final perHour = (row['per_hour'] as num?)?.toInt() ?? 0;
     final minimum = (row['minimum_hours'] as num?)?.toInt() ?? 1;
@@ -231,7 +245,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     final perHour = (row['per_hour'] as num?)?.toInt();
     final minimum = (row['minimum_hours'] as num?)?.toInt();
     if (base == null || perHour == null || minimum == null) {
-      return 'Price from the server';
+      return service.key == 'GETAWAY'
+          ? 'Unavailable — admin rate not set'
+          : 'Price from the server';
     }
     return 'from ₹${base + perHour * minimum}';
   }
@@ -242,7 +258,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   int get _minimumHours => (_priceRow['minimum_hours'] as num?)?.toInt() ?? 1;
 
   void _normaliseDuration() {
-    if (_hours < _minimumHours) {
+    if (!_isGetaway && _hours < _minimumHours) {
       _durationIndex = _durations.indexWhere((h) => h >= _minimumHours);
       if (_durationIndex < 0) _durationIndex = _durations.length - 1;
     }
@@ -255,14 +271,30 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   bool get _canContinue {
     switch (_step) {
       case 0:
-        return _pricingRows.isNotEmpty;
+        return _priceRow.isNotEmpty;
       case 1:
+        if (_isGetaway) {
+          final start = _when;
+          final end = _returnAt;
+          if (start == null || end == null || !start.isAfter(DateTime.now())) {
+            return false;
+          }
+          final startDay = DateTime(start.year, start.month, start.day);
+          final endDay = DateTime(end.year, end.month, end.day);
+          final minutes = end.difference(start).inMinutes;
+          return endDay.isAfter(startDay) &&
+              end.isAfter(start) &&
+              end.difference(start) <= const Duration(days: 31) &&
+              _hours >= 1 &&
+              _hours <= 744 &&
+              _hours <= (minutes / 60).ceil();
+        }
         return _hours >= _minimumHours &&
             (!_scheduleLater || (_when?.isAfter(DateTime.now()) ?? false));
       case 2:
         return _pickupPlace != null &&
             _pickup.text.trim().length >= 4 &&
-            (_service.key != 'OUTSTATION' ||
+            (!(_service.key == 'OUTSTATION' || _isGetaway) ||
                 (_dropPlace != null && _drop.text.trim().length >= 4));
       case 3:
         return _vehicle?.id != null &&
@@ -277,7 +309,10 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
 
   String get _whenLabel {
     if (!_scheduleLater) return 'As soon as possible';
-    final when = _when;
+    return _formatWhen(_when);
+  }
+
+  String _formatWhen(DateTime? when) {
     if (when == null) return 'Pick date & time';
     final months = [
       'Jan',
@@ -296,7 +331,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     final hour = when.hour % 12 == 0 ? 12 : when.hour % 12;
     final minute = when.minute.toString().padLeft(2, '0');
     final period = when.hour < 12 ? 'AM' : 'PM';
-    return '${when.day} ${months[when.month - 1]}, $hour:$minute $period';
+    return '${when.day} ${months[when.month - 1]} ${when.year}, $hour:$minute $period';
   }
 
   Future<void> _pickDateTime() async {
@@ -315,6 +350,31 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     );
     if (time == null || !mounted) return;
     setState(() => _when =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute));
+  }
+
+  Future<void> _pickReturnDateTime() async {
+    final start = _when;
+    if (start == null) return;
+    final first = DateTime(start.year, start.month, start.day)
+        .add(const Duration(days: 1));
+    final last = start.add(const Duration(days: 31));
+    final proposed = _returnAt;
+    final initial =
+        proposed != null && !proposed.isBefore(first) && !proposed.isAfter(last)
+            ? proposed
+            : first;
+    final date = await showDatePicker(
+        context: context,
+        initialDate: initial,
+        firstDate: first,
+        lastDate: last);
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(proposed ?? start));
+    if (time == null || !mounted) return;
+    setState(() => _returnAt =
         DateTime(date.year, date.month, date.day, time.hour, time.minute));
   }
 
@@ -361,14 +421,21 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                 Divider(color: dividerSoft, height: 18),
                 DmInfoRow(
                     label: 'Duration',
-                    value: '${_durations[_durationIndex]} hours',
+                    value: '$_hours hours',
                     icon: Icons.timer_outlined),
                 Divider(color: dividerSoft, height: 18),
                 DmInfoRow(
                     label: 'Pickup',
                     value: _pickup.text.trim(),
                     icon: Icons.my_location_rounded),
-                if (_service.key == 'OUTSTATION') ...[
+                if (_isGetaway) ...[
+                  Divider(color: dividerSoft, height: 18),
+                  DmInfoRow(
+                      label: 'Return',
+                      value: _formatWhen(_returnAt),
+                      icon: Icons.event_available),
+                ],
+                if (_service.key == 'OUTSTATION' || _isGetaway) ...[
                   Divider(color: dividerSoft, height: 18),
                   DmInfoRow(
                       label: 'Drop',
@@ -421,8 +488,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           const DmInfoBox(
             icon: Icons.verified_user_outlined,
             text:
-                'Eligible approved and online drivers see this request in their app. Toll, waiting time and night '
-                'allowance join the fare breakdown with the fare engine. No payment is taken in this build.',
+                'Eligible approved and online drivers see this request immediately, even for future dates. '
+                'Fuel, tolls, parking and driver stay/food are not included; the customer pays them separately. '
+                'No automatic payment is taken.',
           ),
           const SizedBox(height: 18),
           DmPrimaryButton(
@@ -444,6 +512,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         dropAddress: _drop.text.trim(),
         notes: _notes.text.trim(),
         scheduledAt: _scheduleLater ? _when : null,
+        returnAt: _isGetaway ? _returnAt : null,
         vehicleId: _vehicle!.id!,
         requestKey: _requestKey,
         pickupLatitude: _pickupPlace?.latitude,
@@ -465,7 +534,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     }
   }
 
-  int get _durationHours => _durations[_durationIndex];
+  int get _durationHours => _hours;
 
   Future<void> _showCreated(BookingModel booking) async {
     final open = await dmShowSheet<bool>(
@@ -654,21 +723,24 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const DmSectionLabel('Timing'),
-            DmOptionRow(
-              label: 'Now',
-              caption: 'No guaranteed arrival time',
-              icon: Icons.bolt_rounded,
-              selected: !_scheduleLater,
-              onTap: () => setState(() => _scheduleLater = false),
-            ),
-            DmOptionRow(
-              label: 'Schedule for later',
-              caption: 'Up to 60 days ahead',
-              icon: Icons.event_outlined,
-              selected: _scheduleLater,
-              onTap: () => setState(() => _scheduleLater = true),
-            ),
+            if (!_isGetaway)
+              DmOptionRow(
+                label: 'Now',
+                caption: 'No guaranteed arrival time',
+                icon: Icons.bolt_rounded,
+                selected: !_scheduleLater,
+                onTap: () => setState(() => _scheduleLater = false),
+              ),
+            if (!_isGetaway)
+              DmOptionRow(
+                label: 'Schedule for later',
+                caption: 'Up to 60 days ahead',
+                icon: Icons.event_outlined,
+                selected: _scheduleLater,
+                onTap: () => setState(() => _scheduleLater = true),
+              ),
             if (_scheduleLater) ...[
+              if (_isGetaway) const DmSectionLabel('Start date & time'),
               const SizedBox(height: 6),
               GestureDetector(
                 onTap: _pickDateTime,
@@ -699,21 +771,49 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                 ),
               ),
             ],
-            const SizedBox(height: 20),
-            const DmSectionLabel('How long do you need the driver?'),
-            Wrap(
-              spacing: 9,
-              runSpacing: 9,
-              children: [
-                for (var i = 0; i < _durations.length; i++)
-                  if (_durations[i] >= _minimumHours)
-                    DmSelectChip(
-                      label: '${_durations[i]} hours',
-                      selected: _durationIndex == i,
-                      onSelected: (_) => setState(() => _durationIndex = i),
-                    ),
-              ],
-            ),
+            if (_isGetaway) ...[
+              const SizedBox(height: 12),
+              DmOptionRow(
+                label: 'Return date & time',
+                caption: _when == null
+                    ? 'Choose start date first'
+                    : _formatWhen(_returnAt),
+                icon: Icons.event_available,
+                onTap: _when == null ? null : _pickReturnDateTime,
+              ),
+              const SizedBox(height: 12),
+              DmField(
+                controller: _getawayHours,
+                hint: 'Total driver hours (1–744)',
+                icon: Icons.timer_outlined,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (_) => setState(() {}),
+                helper:
+                    'Enter total driver hours for the whole trip. Not elapsed trip hours.',
+              ),
+              const SizedBox(height: 8),
+              Text(
+                  'Return must be on a later day, within 31 days. Driver hours cannot exceed trip time.',
+                  style: dmCaption(size: 11)),
+            ],
+            if (!_isGetaway) ...[
+              const SizedBox(height: 20),
+              const DmSectionLabel('How long do you need the driver?'),
+              Wrap(
+                spacing: 9,
+                runSpacing: 9,
+                children: [
+                  for (var i = 0; i < _durations.length; i++)
+                    if (_durations[i] >= _minimumHours)
+                      DmSelectChip(
+                        label: '${_durations[i]} hours',
+                        selected: _durationIndex == i,
+                        onSelected: (_) => setState(() => _durationIndex = i),
+                      ),
+                ],
+              ),
+            ],
           ],
         );
       case 2:
@@ -737,14 +837,14 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
             const SizedBox(height: 14),
             DmOptionRow(
                 label: 'Choose destination on map',
-                caption: _service.key == 'OUTSTATION'
+                caption: (_service.key == 'OUTSTATION' || _isGetaway)
                     ? 'Required for outstation'
                     : 'Optional destination pin',
                 icon: Icons.flag_outlined,
                 onTap: () => _pickPlace(false)),
             DmField(
               controller: _drop,
-              hint: _service.label == 'Outstation'
+              hint: (_service.key == 'OUTSTATION' || _isGetaway)
                   ? 'Destination city'
                   : 'Destination (optional)',
               icon: Icons.place_outlined,
@@ -762,8 +862,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
             const DmInfoBox(
               icon: Icons.location_searching_rounded,
               text:
-                  'Map search and live GPS pickup pins are not enabled in this beta. '
-                  'Type the address for now.',
+                  'Choose pickup and destination on the map. If GPS is unavailable, place the pin manually and enter the address.',
             ),
           ],
         );
@@ -888,9 +987,16 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                   icon: Icons.schedule_rounded),
               Divider(color: dividerSoft, height: 18),
               DmInfoRow(
-                  label: 'Duration',
-                  value: '${_durations[_durationIndex]} hours',
+                  label: 'Driver hours',
+                  value: '$_hours hours',
                   icon: Icons.timer_outlined),
+              if (_isGetaway) ...[
+                Divider(color: dividerSoft, height: 18),
+                DmInfoRow(
+                    label: 'Return',
+                    value: _formatWhen(_returnAt),
+                    icon: Icons.event_available),
+              ],
               Divider(color: dividerSoft, height: 18),
               DmInfoRow(
                   label: 'Pickup',
@@ -936,7 +1042,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         const DmInfoBox(
           icon: Icons.info_outline_rounded,
           text:
-              'Your fare is based on the selected service and duration. Tolls, parking and other extras are not included in this estimate.',
+              'Estimate covers driver hours only. Fuel, tolls, parking and driver stay/food are paid separately by the customer.',
         ),
       ],
     );
@@ -947,6 +1053,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     return DmTapScale(
       onTap: () => setState(() {
         _serviceIndex = index;
+        if (_isGetaway) _scheduleLater = true;
         _normaliseDuration();
       }),
       borderRadius: BorderRadius.circular(radiusCard),
@@ -1046,7 +1153,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
             padding: const EdgeInsets.only(top: 9),
             child: Text(
               _step == 0
-                  ? 'Reconnect to load pricing and continue'
+                  ? (_pricingRows.isEmpty
+                      ? 'Reconnect to load pricing and continue'
+                      : 'Service unavailable until admin enables its rate')
                   : _step == 2
                       ? (_pickupPlace == null
                           ? 'Choose a pickup pin on the map to continue'
@@ -1055,7 +1164,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                               : 'Enter the outstation destination')
                       : _step == 3
                           ? 'Choose a car to continue'
-                          : 'Choose a future date and time to continue',
+                          : (_isGetaway
+                              ? 'Choose valid start/return dates and driver hours (1–744)'
+                              : 'Choose a future date and time to continue'),
               style: dmCaption(size: 11).copyWith(color: warning),
             ),
           ),

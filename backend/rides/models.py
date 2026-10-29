@@ -35,6 +35,7 @@ class ServiceRate(models.Model):
     base = models.PositiveIntegerField(help_text='Base fare in rupees')
     per_hour = models.PositiveIntegerField(help_text='Rate per billable hour in rupees')
     updated_at = models.DateTimeField(auto_now=True)
+    enabled = models.BooleanField(default=True, help_text='Disable to prevent new bookings for this service.')
 
     class Meta:
         constraints = [
@@ -122,6 +123,7 @@ class Booking(models.Model):
         FULL_DAY = 'FULL_DAY', 'Full day'
         AIRPORT = 'AIRPORT', 'Airport'
         OUTSTATION = 'OUTSTATION', 'Outstation'
+        GETAWAY = 'GETAWAY', 'Outstation Getaways'
         NIGHT = 'NIGHT', 'Night drive'
 
     customer = models.ForeignKey(
@@ -143,6 +145,7 @@ class Booking(models.Model):
 
     service = models.CharField(max_length=12, choices=Service.choices, default=Service.BOOK_NOW)
     scheduled_at = models.DateTimeField(null=True, blank=True, help_text='Empty = as soon as possible.')
+    return_at = models.DateTimeField(null=True, blank=True, help_text='Planned return for a multi-day getaway.')
     duration_hours = models.PositiveSmallIntegerField(default=4)
     pickup = models.CharField(max_length=240)
     drop_address = models.CharField(max_length=240, blank=True)
@@ -322,7 +325,7 @@ def notify_available_drivers(booking: Booking, limit: int = 50) -> int:
         profiles = profiles.filter(**{capability: True})
     if booking.service == Booking.Service.NIGHT:
         profiles = profiles.filter(night_driving=True)
-    if booking.service == Booking.Service.OUTSTATION:
+    if booking.service in (Booking.Service.OUTSTATION, Booking.Service.GETAWAY):
         profiles = profiles.filter(outstation=True)
     rows = [Notification(
         user_id=profile.user_id, title='New booking request',
