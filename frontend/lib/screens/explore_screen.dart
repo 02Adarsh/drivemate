@@ -62,6 +62,12 @@ class ExploreScreen extends StatelessWidget {
       Icons.temple_hindu_outlined,
     ),
     (
+      'Shopping / Errands Driver',
+      'A driver for shopping and errands in your own car.',
+      'assets/images/svc_hourly.jpg',
+      Icons.shopping_bag_outlined,
+    ),
+    (
       'Full day',
       'A longer driver package for your day.',
       'assets/images/svc_outstation.jpg',

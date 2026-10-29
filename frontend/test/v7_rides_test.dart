@@ -476,6 +476,50 @@ void main() {
     await disposeUi(tester);
   });
 
+  testWidgets('errands is unavailable until admin enables its rate', (
+    tester,
+  ) async {
+    await screen(
+      tester,
+      const BookDriverScreen(
+        name: 'Adarsh',
+        initialService: 'Shopping / Errands Driver',
+      ),
+    );
+    expect(find.text('Unavailable — admin rate not set'), findsWidgets);
+    expect(
+      find.text('Service unavailable until admin enables its rate'),
+      findsOneWidget,
+    );
+    await disposeUi(tester);
+  });
+
+  testWidgets('errands booking sends choices, not a client price', (
+    tester,
+  ) async {
+    api.errandsEnabled = true;
+    api.cars = [carFixture()];
+    await screen(
+      tester,
+      const BookDriverScreen(
+        name: 'Adarsh',
+        initialService: 'Shopping / Errands Driver',
+      ),
+    );
+    await tap(tester, 'Continue');
+    await tap(tester, 'Continue');
+    await pickupPin(tester);
+    await tap(tester, 'Continue');
+    await tap(tester, 'Continue');
+    expect(find.text('₹600'), findsWidgets);
+    await tap(tester, 'Request a driver');
+    await tap(tester, 'Send request to drivers');
+    expect(api.lastBookingPost!['service'], 'ERRANDS');
+    expect(api.lastBookingPost!['duration_hours'], 4);
+    expect(api.lastBookingPost!.containsKey('estimated_fare'), isFalse);
+    await disposeUi(tester);
+  });
+
   testWidgets(
     'full-day duration respects the server minimum rather than a misleading two-hour quote',
     (tester) async {

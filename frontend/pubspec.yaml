@@ -1,7 +1,7 @@
 name: drivemate
 description: DriveMate — a verified professional driver comes to you and drives the car you own.
 publish_to: 'none'
-version: 1.7.7+15
+version: 1.7.8+16
 environment:
   sdk: '>=3.3.0 <4.0.0'
 dependencies:

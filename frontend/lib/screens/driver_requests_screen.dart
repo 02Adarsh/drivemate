@@ -406,11 +406,14 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
           ),
           if (booking.service == 'EVENT' ||
               booking.service == 'CORPORATE' ||
+              booking.service == 'ERRANDS' ||
               booking.service == 'PILGRIMAGE') ...[
             Divider(color: dividerSoft, height: 14),
             DmInfoRow(
               label: 'Starts',
-              value: formatRideDateTime(booking.scheduledAt),
+              value: booking.scheduledAt == null
+                  ? 'As soon as available'
+                  : formatRideDateTime(booking.scheduledAt),
               icon: Icons.event,
             ),
             if (booking.dropAddress.isNotEmpty) ...[

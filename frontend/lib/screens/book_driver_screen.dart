@@ -114,6 +114,13 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       Icons.temple_hindu_outlined,
     ),
     const _BookingService(
+      'ERRANDS',
+      'Shopping / Errands Driver',
+      'A driver for shopping and errands in your own car.',
+      'assets/images/svc_hourly.jpg',
+      Icons.shopping_bag_outlined,
+    ),
+    const _BookingService(
       'FULL_DAY',
       'Full day',
       'Up to 12 hours',

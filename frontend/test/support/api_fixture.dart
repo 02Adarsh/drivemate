@@ -71,6 +71,7 @@ class ApiFixture {
   bool online;
   bool getawayEnabled = false;
   bool eventEnabled = false;
+  bool errandsEnabled = false;
   bool pilgrimageEnabled = false;
   bool corporateEnabled = false;
   List<Map<String, dynamic>> cars;
@@ -377,6 +378,7 @@ class ApiFixture {
           price('NIGHT', 129, 139, 2),
           if (getawayEnabled) price('GETAWAY', 250, 125, 1),
           if (eventEnabled) price('EVENT', 200, 100, 1),
+          if (errandsEnabled) price('ERRANDS', 200, 100, 1),
           if (pilgrimageEnabled) price('PILGRIMAGE', 200, 100, 1),
           if (corporateEnabled) price('CORPORATE', 200, 100, 1),
         ],
