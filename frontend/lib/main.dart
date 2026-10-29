@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'screens/splash_screen.dart';
 import 'theme/dm_theme.dart';
+import 'widgets/app_update_watcher.dart';
 export 'theme/dm_theme.dart';
 
 Future<void> main() async {
@@ -13,11 +14,28 @@ Future<void> main() async {
 }
 
 /// DriveMate: a professional driver for the customer's own car.
-class DriveMateApp extends StatelessWidget {
+class DriveMateApp extends StatefulWidget {
   const DriveMateApp({super.key});
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
+  State<DriveMateApp> createState() => _DriveMateAppState();
+}
+
+class _DriveMateAppState extends State<DriveMateApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  final _startupReady = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _startupReady.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AppUpdateWatcher(
+      navigatorKey: _navigatorKey,
+      startupReady: _startupReady,
+      child: ListenableBuilder(
         listenable: DmAppearance.instance,
         builder: (context, _) {
           final dark = DmAppearance.instance.dark;
@@ -29,6 +47,7 @@ class DriveMateApp extends StatelessWidget {
                 dark ? Brightness.light : Brightness.dark,
           ));
           return MaterialApp(
+            navigatorKey: _navigatorKey,
             title: 'DriveMate',
             debugShowCheckedModeBanner: false,
             theme: buildDriveMateTheme(),
@@ -39,7 +58,7 @@ class DriveMateApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate
             ],
-            home: const SplashScreen(),
+            home: SplashScreen(onNavigated: () => _startupReady.value = true),
             builder: (context, child) {
               final factor = DmAppearance.instance.largeText ? 1.15 : 1.0;
               final scale = MediaQuery.textScalerOf(context).scale(1) * factor;
@@ -50,5 +69,5 @@ class DriveMateApp extends StatelessWidget {
             },
           );
         },
-      );
+      ));
 }

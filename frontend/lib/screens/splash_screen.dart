@@ -14,7 +14,8 @@ import 'onboarding_screen.dart';
 /// Branded launch screen. After the animation it either resumes an existing
 /// session or shows the introduction pages.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final VoidCallback? onNavigated;
+  const SplashScreen({super.key, this.onNavigated});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -53,8 +54,11 @@ class _SplashScreenState extends State<SplashScreen>
     final hasSession = await AuthService.hasSession();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(dmRoute(
-      hasSession ? const SessionResumeScreen() : const OnboardingScreen(),
+      hasSession
+          ? SessionResumeScreen(onReady: widget.onNavigated)
+          : const OnboardingScreen(),
     ));
+    if (!hasSession) widget.onNavigated?.call();
   }
 
   @override

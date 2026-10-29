@@ -10,7 +10,8 @@ import 'login_screen.dart';
 /// Gate dashboard access on a fresh progress check, including after an app
 /// restart. An offline or malformed response never counts as completion.
 class SessionResumeScreen extends StatefulWidget {
-  const SessionResumeScreen({super.key});
+  final VoidCallback? onReady;
+  const SessionResumeScreen({super.key, this.onReady});
 
   @override
   State<SessionResumeScreen> createState() => _SessionResumeScreenState();
@@ -49,6 +50,10 @@ class _SessionResumeScreenState extends State<SessionResumeScreen> {
           _loading = false;
         });
       }
+    } finally {
+      // Wait until the session gate finishes navigation (or shows its error),
+      // so its clean route replacement cannot remove an update dialog.
+      if (mounted) widget.onReady?.call();
     }
   }
 
