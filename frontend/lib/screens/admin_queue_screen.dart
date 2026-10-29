@@ -194,8 +194,7 @@ class _AdminQueueScreenState extends State<AdminQueueScreen> {
             icon: Icons.inbox_outlined,
             title: 'Nothing in this list',
             body: _filter == 0
-                ? 'No driver has submitted an application yet. Complete the driver registration on a test '
-                    'account to see it here.'
+                ? 'No driver applications have been submitted yet.'
                 : 'No applications with the "${_filters[_filter]}" status.',
           ),
         ],
@@ -456,6 +455,44 @@ class _DriverReviewSheetState extends State<_DriverReviewSheet> {
     controller.dispose();
   }
 
+  Future<void> _reviewDocument(int id, String action) async {
+    String reason = '';
+    if (action == 'reject') {
+      final controller = TextEditingController();
+      final entered = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Reason for rejection'),
+          content: TextField(controller: controller, maxLength: 500, maxLines: 3,
+              decoration: const InputDecoration(hintText: 'Why should the driver re-upload?')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Reject')),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (!mounted || entered == null) return;
+      if (entered.length < 5) {
+        showDmMessage(context, 'Enter at least 5 characters.', error: true);
+        return;
+      }
+      reason = entered;
+    }
+    setState(() => _busy = true);
+    try {
+      await AuthService.adminReviewDocument(id, action, reason: reason);
+      if (!mounted) return;
+      _changed = true;
+      showDmMessage(context, 'Document status updated.');
+      await _load();
+    } on ApiException catch (error) {
+      if (mounted) showDmMessage(context, error.message, error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
@@ -591,35 +628,21 @@ class _DriverReviewSheetState extends State<_DriverReviewSheet> {
                           '${document['review_status'] ?? ''} • ${document['document_number'] ?? 'no number'}',
                           style: dmCaption(size: 10.8),
                         ),
+                        if ((document['rejection_reason'] ?? '').toString().isNotEmpty)
+                          Text('Reason: ${document['rejection_reason']}', style: dmCaption(size: 10.8)),
                       ],
                     ),
                   ),
                   if (document['id'] is int)
-                    TextButton(
-                      onPressed: () async {
-                        // Capture the messenger before the await so the context
-                        // is never used across an async gap.
-                        final messenger = ScaffoldMessenger.of(context);
-                        try {
-                          await AuthService.adminReviewDocument(
-                              document['id'] as int, 'approve');
-                          if (!mounted) return;
-                          messenger.showSnackBar(
-                            const SnackBar(
-                                content: Text('Document approved.'),
-                                duration: Duration(seconds: 1)),
-                          );
-                          await _load();
-                        } on ApiException catch (error) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                                content: Text(error.message),
-                                duration: const Duration(seconds: 2)),
-                          );
-                        }
-                      },
-                      child: const Text('Approve',
-                          style: TextStyle(fontSize: 11.6)),
+                    PopupMenuButton<String>(
+                      enabled: !_busy,
+                      tooltip: 'Review document',
+                      onSelected: (action) => _reviewDocument(document['id'] as int, action),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'approve', child: Text('Approve')),
+                        PopupMenuItem(value: 'reject', child: Text('Reject')),
+                        PopupMenuItem(value: 'pending', child: Text('Set pending')),
+                      ],
                     ),
                 ],
               ),

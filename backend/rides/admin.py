@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import Booking, BookingDecline, BookingEvent, Notification, Vehicle
+from .models import Booking, BookingDecline, BookingEvent, Notification, Vehicle, ServiceRate
 
 
 class ReadOnlyLedgerAdmin(admin.ModelAdmin):
@@ -53,3 +53,15 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 admin.site.register(BookingDecline)
+
+
+@admin.register(ServiceRate)
+class ServiceRateAdmin(admin.ModelAdmin):
+    list_display = ('service', 'base', 'per_hour', 'updated_at')
+    readonly_fields = ('service', 'updated_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

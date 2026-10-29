@@ -19,12 +19,33 @@ from django.db import models, transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from .pricing import PLATFORM_FEE_PERCENT, driver_payout, estimate_fare
+from .pricing import PLATFORM_FEE_PERCENT, SERVICE_PRICING, driver_payout, estimate_fare
 
 
 def normalise_registration(value: str) -> str:
     """`hr 26 ab 1234` -> `HR26AB1234` (the canonical form we compare with)."""
     return ''.join(str(value).split()).upper()
+
+
+class ServiceRate(models.Model):
+    """Staff-managed whole-rupee prices; existing booking estimates stay unchanged."""
+    service = models.CharField(max_length=12, unique=True, choices=[
+        (key, row['label']) for key, row in SERVICE_PRICING.items()
+    ])
+    base = models.PositiveIntegerField(help_text='Base fare in rupees')
+    per_hour = models.PositiveIntegerField(help_text='Rate per billable hour in rupees')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=Q(base__lte=1000000), name='rate_base_max'),
+            models.CheckConstraint(condition=Q(per_hour__lte=100000), name='rate_hour_max'),
+        ]
+        verbose_name = 'Ride rate'
+        verbose_name_plural = 'Ride rates'
+
+    def __str__(self):
+        return self.get_service_display()
 
 
 class Vehicle(models.Model):

@@ -583,6 +583,6 @@ class _HomeScreenState extends State<HomeScreen>
         const SizedBox(height: 16),
         const DmInfoBox(
             text:
-                'Promotions are created by staff in Django admin. No default fake codes or balances are seeded into real accounts.'),
+                'Promotions are managed by your team.'),
       ];
 }

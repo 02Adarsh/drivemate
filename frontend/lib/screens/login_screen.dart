@@ -13,7 +13,6 @@ import 'forgot_password_screen.dart';
 import 'onboarding_screen.dart';
 import 'otp_screen.dart';
 import 'register_screen.dart';
-import 'server_connection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -177,13 +176,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ]),
                 const Divider(),
                 const SizedBox(height: 8),
-                TextButton.icon(
-                    onPressed: _busy
-                        ? null
-                        : () => Navigator.of(context).push(
-                            dmRoute(ServerConnectionScreen(loginRole: _role))),
-                    icon: const Icon(Icons.network_check_rounded, size: 17),
-                    label: const Text('Server connection')),
                 TextButton(
                     onPressed: _busy
                         ? null

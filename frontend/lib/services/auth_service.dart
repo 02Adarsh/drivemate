@@ -181,6 +181,16 @@ class AuthService {
     } on FormatException {
       invalid = true;
     }
+    // The public app no longer offers a server selector. On release upgrades,
+    // discard any old custom server and never forward an existing token to a
+    // different build-configured host. The user signs in again after a change.
+    if (kReleaseMode) {
+      if (custom != null) await prefs.remove(_serverKey);
+      _customBase = null;
+      if (_sessionBase != null && _sessionBase != _clean(apiBaseUrl)) {
+        invalid = true;
+      }
+    }
     if ((prefs.containsKey(_accessKey) &&
             (_sessionBase == null || prefs.getInt(_contractKey) != 9)) ||
         invalid ||
@@ -233,7 +243,9 @@ class AuthService {
     if (_sessionBase != null) return [_sessionBase!];
     if (_customBase != null) return [_customBase!];
     final bases = <String>[];
-    for (final value in [_activeBase, apiBaseUrl, ...apiFallbackBaseUrls]) {
+    for (final value in kReleaseMode
+        ? [_activeBase, apiBaseUrl]
+        : [_activeBase, apiBaseUrl, ...apiFallbackBaseUrls]) {
       if (value == null) continue;
       final clean = _clean(value);
       if (!bases.contains(clean)) bases.add(clean);
@@ -270,8 +282,7 @@ class AuthService {
     _requireRevision(revision);
     if (found != null) return (base: found, revision: revision);
     throw ApiException(
-        'No DriveMate backend answered the public health check. Open Server connection on '
-        'Login or Account. A blank adb device list means Windows has not detected an authorized phone.');
+        'Could not connect to DriveMate. Check your internet connection and try again.');
   }
 
   static void _requireRevision(int revision) {
@@ -300,24 +311,11 @@ class AuthService {
   }
 
   static Never _networkError(Object error) {
-    final tried = activeBaseUrl;
     if (error is TimeoutException) {
-      throw ApiException(
-        'The server took too long to respond.\n\nSelected server:\n$tried\n\n'
-        'Keep the backend running on the computer and check the Wi-Fi/USB link.',
-      );
+      throw ApiException('The connection timed out. Please try again.');
     }
     if (_isConnectionFailure(error)) {
-      throw ApiException(
-        'Cannot reach the selected DriveMate server ($tried).\n\n'
-        'On the computer, start it with:\n'
-        '  python manage.py runserver 0.0.0.0:8000\n\n'
-        'USB cable (recommended):\n'
-        '  adb reverse tcp:8000 tcp:8000\n'
-        'then select http://127.0.0.1:8000/api in Server connection.\n\n'
-        'Same Wi-Fi: put your computer IPv4 address (ipconfig) in lib/config.dart\n'
-        'and allow port 8000 in the firewall.',
-      );
+      throw ApiException('Could not connect to DriveMate. Check your internet connection and try again.');
     }
     throw ApiException('Something went wrong. Please try again.');
   }
@@ -329,7 +327,7 @@ class AuthService {
       body = decoded is Map<String, dynamic> ? decoded : {'data': decoded};
     } catch (_) {
       throw ApiException(
-        'Unexpected server response (HTTP ${response.statusCode}). Check the backend address in lib/config.dart.',
+        'The service returned an unexpected response. Please try again later.',
         statusCode: response.statusCode,
       );
     }

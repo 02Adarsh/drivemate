@@ -293,8 +293,7 @@ class _DriverDocumentsScreenState extends State<DriverDocumentsScreen> {
               color: warning,
               text: isDone
                   ? 'You already marked this module complete.'
-                  : 'Prototype note: this summary stands in for the final training material. '
-                      'Marking it complete records your acknowledgement.',
+                  : 'Please read this summary before marking it complete. Your acknowledgement will be recorded.',
             ),
             const SizedBox(height: 16),
             if (!isDone)

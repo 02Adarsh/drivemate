@@ -64,8 +64,7 @@ class RoleScreen extends StatelessWidget {
           const SizedBox(height: 22),
           const DmInfoBox(
             icon: Icons.lock_outline_rounded,
-            text: 'Administrator accounts are created on the server with '
-                '"python manage.py createsuperuser". The app never grants admin access by itself.',
+            text: 'Administrator sign-in is restricted to authorised staff.',
           ),
         ],
       ),

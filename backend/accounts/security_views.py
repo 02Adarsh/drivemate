@@ -336,7 +336,7 @@ class AdminDriverReviewView(APIView):
 
 
 class AdminDocumentReviewView(APIView):
-    """Approve or reject a single document."""
+    """Approve, reject or return one document to pending review."""
 
     permission_classes = [IsAdminUser]
 
@@ -345,11 +345,13 @@ class AdminDocumentReviewView(APIView):
         if not document:
             return Response({'detail': 'Document not found.'}, status=status.HTTP_404_NOT_FOUND)
         action = str(request.data.get('action', '')).lower()
-        if action not in ('approve', 'reject'):
-            return Response({'detail': 'action must be approve or reject.'}, status=status.HTTP_400_BAD_REQUEST)
+        if action not in ('approve', 'reject', 'pending'):
+            return Response({'detail': 'action must be approve, reject or pending.'}, status=status.HTTP_400_BAD_REQUEST)
         reason = str(request.data.get('reason', '')).strip()
-        document.review_status = DriverDocument.Review.APPROVED if action == 'approve' else DriverDocument.Review.REJECTED
-        document.rejection_reason = '' if action == 'approve' else (reason or 'Document not readable or not valid.')
+        if action == 'reject' and not (5 <= len(reason) <= 500):
+            return Response({'detail': 'Provide a rejection reason of 5 to 500 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+        document.review_status = {'approve': DriverDocument.Review.APPROVED, 'reject': DriverDocument.Review.REJECTED, 'pending': DriverDocument.Review.PENDING}[action]
+        document.rejection_reason = reason if action == 'reject' else ''
         document.reviewed_at = timezone.now()
         document.reviewed_by = request.user
         document.save()

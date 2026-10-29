@@ -156,7 +156,7 @@ class _OtpScreenState extends State<OtpScreen> {
             const SizedBox(height: 18),
             const DmInfoBox(
               text:
-                  'Check Inbox and Spam. Account codes are private: never share them. Email delivery requires the SMTP settings on your backend; use Resend after the cooldown.',
+                  'Check your inbox and spam folder. Keep your account code private and use Resend if needed.',
             ),
             const SizedBox(height: 14),
             Center(

@@ -654,7 +654,7 @@ class DriverTrainingView(APIView):
                     for row in rows
                 ],
                 'missing_required': driver_progress(profile)['missing_training'],
-                'note': 'Prototype note: these modules are short acknowledgement summaries, not the final training content.',
+                'note': 'Please read each summary before acknowledging it.',
             }
         )
 

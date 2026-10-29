@@ -36,7 +36,7 @@ def email_configured():
 
 def send_real_email(subject, body, recipients, attachment=None):
     if not email_configured():
-        raise ValidationError({'detail': 'Email delivery is not configured. Set SMTP on the backend; no email was sent.'})
+        raise ValidationError({'detail': 'Email delivery is temporarily unavailable. No email was sent. Please try again later.'})
     try:
         message = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
         if attachment:
@@ -45,7 +45,7 @@ def send_real_email(subject, body, recipients, attachment=None):
             raise RuntimeError('Email was not accepted')
     except Exception:
         logger.warning('Account email delivery failed; check server SMTP configuration (no secrets logged).')
-        raise ValidationError({'detail': 'Email could not be sent. Check SMTP on the backend and retry.'})
+        raise ValidationError({'detail': 'Email could not be sent. Please try again later.'})
 
 
 class PlaceSerializer(serializers.ModelSerializer):

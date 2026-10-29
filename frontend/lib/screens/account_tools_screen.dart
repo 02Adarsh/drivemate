@@ -14,6 +14,7 @@ import '../widgets/dm_dashboard.dart';
 import '../widgets/dm_feedback.dart';
 import '../widgets/dm_fields.dart';
 import '../widgets/dm_screen.dart';
+import '../widgets/policy_sheet.dart';
 import 'forgot_password_screen.dart';
 import 'login_screen.dart';
 import 'map_picker_screen.dart';
@@ -125,7 +126,7 @@ class _HubCollectionScreenState extends State<HubCollectionScreen> {
                 icon: Icons.bookmarks_outlined,
                 title: 'Nothing saved yet',
                 body:
-                    'Add an item above. It is stored on your account, not a sample list.')
+                    'Add an item above to save it to your account.')
           else
             for (final item in _items)
               Container(
@@ -765,6 +766,18 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
               text:
                   'Trip-start OTP is always required. Only your assigned driver sees contact details. Location is shared only during an active assigned trip; it is hidden from trip-history responses.'),
           const SizedBox(height: 18),
+          DmListCard(
+              icon: Icons.description_outlined,
+              title: 'Terms & Conditions',
+              body: 'Read the terms for using DriveMate.',
+              onTap: () => showPolicySheet(context, PolicyDoc.terms)),
+          const SizedBox(height: 14),
+          DmListCard(
+              icon: Icons.privacy_tip_outlined,
+              title: 'Privacy Policy',
+              body: 'Learn how your information is handled.',
+              onTap: () => showPolicySheet(context, PolicyDoc.privacy)),
+          const SizedBox(height: 14),
           DmListCard(
               icon: Icons.download_outlined,
               title: 'Export my account data',

@@ -829,7 +829,7 @@ class DmEarningsCard extends StatelessWidget {
     this.week = '₹0',
     this.month = '₹0',
     this.note =
-        'Trip payments, incentives and weekly payouts arrive with the booking phase.',
+        'Your completed trips and calculated earnings will appear here.',
   });
 
   @override

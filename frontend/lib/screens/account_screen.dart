@@ -15,7 +15,6 @@ import 'driver_documents_screen.dart';
 import 'login_screen.dart';
 import 'notifications_screen.dart';
 import 'safety_screen.dart';
-import 'server_connection_screen.dart';
 import 'vehicles_screen.dart';
 import 'driver_upi_screen.dart';
 
@@ -256,12 +255,6 @@ class _AccountScreenState extends State<AccountScreen> {
                   'Notification preferences',
                   'In-app trip alerts and emailed receipts',
                   () => _open(const NotificationPreferencesScreen())),
-              _row(
-                  Icons.network_check_rounded,
-                  'Server connection',
-                  'Test or change the backend safely',
-                  () => _open(ServerConnectionScreen(
-                      loginRole: widget.role.toUpperCase()))),
               const SizedBox(height: 18),
               TextButton.icon(
                   onPressed: _logout,
@@ -269,7 +262,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   label: const Text('Sign out')),
               const SizedBox(height: 10),
               Text(
-                  'DriveMate v9.1 • OpenStreetMap • Cash / personal direct UPI\nDriveMate is a driver-for-your-own-car platform, not Uber. Direct UPI uses your UPI app and manual driver bank checks; no gateway verification, automatic debit, wallet or emergency dispatch is claimed.',
+                  'Direct UPI payments are sent to the driver and confirmed manually. DriveMate does not automatically verify bank payments or dispatch emergency services.',
                   style: dmCaption(size: 10.5)),
             ]));
   }

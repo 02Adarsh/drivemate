@@ -4,6 +4,7 @@ The same rules run here and in the REST API, because both call
 `accounts.progress` instead of duplicating the logic.
 """
 
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.urls import reverse
@@ -13,13 +14,14 @@ from django.utils import timezone
 from .models import (
     CustomerProfile,
     DriverDocument,
+    DriverDocumentGroup,
     DriverEmergencyContact,
     DriverProfile,
     DriverTraining,
     EmailOTP,
     User,
 )
-from .progress import apply_review_decision, driver_progress, ensure_training_rows
+from .progress import apply_review_decision, driver_progress, ensure_training_rows, sync_driver_status
 
 
 @admin.register(User)
@@ -39,11 +41,43 @@ class UserAdmin(BaseUserAdmin):
     readonly_fields = ('last_seen_at',)
 
 
+class DocumentReviewForm(forms.ModelForm):
+    class Meta:
+        model = DriverDocument
+        fields = '__all__'
+
+    def clean(self):
+        data = super().clean()
+        reason = (data.get('rejection_reason') or '').strip()
+        if data.get('review_status') == DriverDocument.Review.REJECTED and len(reason) < 5:
+            self.add_error('rejection_reason', 'Enter at least 5 characters for a rejection.')
+        if data.get('review_status') != DriverDocument.Review.REJECTED:
+            data['rejection_reason'] = ''
+        return data
+
+
+class DocumentReviewAdminMixin:
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in instances:
+            if isinstance(obj, DriverDocument):
+                obj.reviewed_by = request.user
+                obj.reviewed_at = timezone.now()
+            obj.save()
+        formset.save_m2m()
+        sync_driver_status(form.instance)
+
+
 class DriverDocumentInline(admin.TabularInline):
     model = DriverDocument
+    form = DocumentReviewForm
     extra = 0
-    fields = ('document_type', 'document_number', 'expires_at', 'review_status', 'rejection_reason', 'private_download')
-    readonly_fields = ('private_download',)
+    can_delete = False
+    fields = ('document_type', 'document_number', 'expires_at', 'private_download', 'review_status', 'rejection_reason', 'reviewed_by', 'reviewed_at')
+    readonly_fields = ('document_type', 'document_number', 'expires_at', 'private_download', 'reviewed_by', 'reviewed_at')
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
     @admin.display(description='Secure file')
     def private_download(self, obj):
@@ -54,7 +88,7 @@ class DriverDocumentInline(admin.TabularInline):
 
 
 @admin.register(DriverProfile)
-class DriverProfileAdmin(admin.ModelAdmin):
+class DriverProfileAdmin(DocumentReviewAdminMixin, admin.ModelAdmin):
     list_display = ('user', 'city', 'experience_years', 'verification_status', 'profile_complete', 'documents_count', 'submitted_at')
     list_filter = ('verification_status', 'city', 'profile_complete', 'manual_transmission', 'automatic_transmission')
     search_fields = ('user__email', 'user__full_name', 'city', 'licence_number')
@@ -132,39 +166,27 @@ class DriverProfileAdmin(admin.ModelAdmin):
         self.message_user(request, f'Re-activated {queryset.count()} driver(s).')
 
 
-@admin.register(DriverDocument)
-class DriverDocumentAdmin(admin.ModelAdmin):
-    list_display = ('driver', 'document_type', 'document_number', 'review_status', 'expires_at', 'uploaded_at', 'reviewed_at', 'reviewed_by', 'private_download')
-    list_filter = ('document_type', 'review_status')
-    search_fields = ('driver__user__email', 'driver__user__full_name', 'document_number')
-    readonly_fields = ('driver', 'document_type', 'private_storage_key', 'uploaded_at', 'updated_at', 'reviewed_at', 'reviewed_by', 'private_download')
-    fields = ('driver', 'document_type', 'document_number', 'expires_at', 'private_storage_key', 'private_download', 'review_status', 'rejection_reason', 'uploaded_at', 'updated_at', 'reviewed_at', 'reviewed_by')
-    actions = ('action_approve_documents', 'action_reject_documents')
+@admin.register(DriverDocumentGroup)
+class DriverDocumentGroupAdmin(DocumentReviewAdminMixin, admin.ModelAdmin):
+    list_display = ('user', 'city', 'verification_status', 'documents_count')
+    search_fields = ('user__email', 'user__full_name', 'user__phone')
+    list_filter = ('verification_status',)
+    fields = ('user', 'verification_status')
+    readonly_fields = ('user', 'verification_status')
+    inlines = (DriverDocumentInline,)
 
-    @admin.display(description='Secure file')
-    def private_download(self, obj):
-        if not obj.pk:
-            return '-'
-        url = reverse('admin-document-download', kwargs={'document_id': obj.pk})
-        return format_html('<a href="{}">Download private document</a>', url)
+    @admin.display(description='Documents')
+    def documents_count(self, obj):
+        return obj.documents.count()
 
-    def save_model(self, request, obj, form, change):
-        obj.reviewed_by = request.user
-        obj.reviewed_at = timezone.now()
-        super().save_model(request, obj, form, change)
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user').filter(documents__isnull=False).distinct()
 
-    @admin.action(description='Mark documents APPROVED')
-    def action_approve_documents(self, request, queryset):
-        queryset.update(review_status=DriverDocument.Review.APPROVED, reviewed_by=request.user, reviewed_at=timezone.now(), rejection_reason='')
+    def has_add_permission(self, request):
+        return False
 
-    @admin.action(description='Mark documents REJECTED')
-    def action_reject_documents(self, request, queryset):
-        queryset.update(
-            review_status=DriverDocument.Review.REJECTED,
-            reviewed_by=request.user,
-            reviewed_at=timezone.now(),
-            rejection_reason='Document rejected by verification staff. Please upload a clear photo.',
-        )
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(DriverTraining)

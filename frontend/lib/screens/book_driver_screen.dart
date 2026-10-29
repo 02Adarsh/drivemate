@@ -934,10 +934,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         ),
         const SizedBox(height: 12),
         const DmInfoBox(
-          icon: Icons.science_outlined,
+          icon: Icons.info_outline_rounded,
           text:
-              'Prototype estimate. The real fare engine (surge, tolls, night allowance, taxes) replaces this '
-              'before launch.',
+              'Your fare is based on the selected service and duration. Tolls, parking and other extras are not included in this estimate.',
         ),
       ],
     );

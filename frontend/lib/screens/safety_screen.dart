@@ -103,7 +103,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
               icon: Icons.password_rounded,
               title: 'Mandatory customer start code',
               body:
-                  'Only you can retrieve your trip code. The assigned driver must verify it on the server before the app starts the trip.'),
+                  'Only you can retrieve your trip code. Share it with your assigned driver when you meet.'),
           const SizedBox(height: 12),
           const DmListCard(
               icon: Icons.person_pin_circle_outlined,

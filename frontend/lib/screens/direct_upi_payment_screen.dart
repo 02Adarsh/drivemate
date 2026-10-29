@@ -253,7 +253,7 @@ class _DirectUPIPaymentScreenState extends State<DirectUPIPaymentScreen>
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('FINAL FARE • SET BY SERVER',
+                              Text('FINAL FARE',
                                   style: dmSectionLabel()),
                               const SizedBox(height: 10),
                               SelectableText('₹${data['amount']}',

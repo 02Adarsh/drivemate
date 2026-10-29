@@ -390,7 +390,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen>
                             ])),
                     if (b.isDemo) ...[
                       const SizedBox(height: 10),
-                      const DmDemoBadge(text: 'DEMO BOOKING • DEVELOPMENT DATA')
+                      const DmDemoBadge(text: 'SAMPLE BOOKING • NOT A REAL TRIP')
                     ],
                     if (_error != null) ...[
                       const SizedBox(height: 12),

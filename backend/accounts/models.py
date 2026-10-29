@@ -186,6 +186,14 @@ class DriverProfile(models.Model):
         return self.verification_status == self.Status.APPROVED
 
 
+class DriverDocumentGroup(DriverProfile):
+    """Admin-only proxy: one row per driver, with all documents inline."""
+    class Meta:
+        proxy = True
+        verbose_name = 'Driver documents'
+        verbose_name_plural = 'Driver documents (grouped)'
+
+
 class DriverDocument(models.Model):
     """Private verification document. Files are stored under a private storage key."""
 

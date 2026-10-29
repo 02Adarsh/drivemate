@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../config.dart';
 import '../services/auth_service.dart';
 import '../services/navigation.dart';
 import '../theme/dm_theme.dart';
@@ -349,16 +348,7 @@ class _DriverApplicationStatusScreenState
               const DmInfoBox(
                 icon: Icons.support_agent_rounded,
                 text:
-                    'Need help with verification? Write to $supportEmail (placeholder address). '
-                    'Real support routing is part of the support-ticket phase.',
-              ),
-              const SizedBox(height: 10),
-              const DmInfoBox(
-                icon: Icons.science_outlined,
-                color: warning,
-                text:
-                    'Prototype note: admins approve drivers in the Django admin panel or through the admin API. '
-                    'A full in-app admin dashboard is the next phase.',
+                    'Need help with verification? Open Help & support from your account to send a request.',
               ),
             ],
           ],

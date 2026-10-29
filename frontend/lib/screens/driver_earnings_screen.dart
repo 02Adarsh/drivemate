@@ -100,7 +100,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
           else if (summary != null)
             ...dmStagger([
               if (summary.isDemo)
-                const DmDemoBadge(text: 'DEMO ACCOUNT • SEEDED LEDGER'),
+                const DmDemoBadge(text: 'SAMPLE ACCOUNT • NOT REAL EARNINGS'),
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration:
@@ -222,21 +222,21 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
                 icon: Icons.receipt_long_outlined,
                 title: 'Trip ends',
                 body:
-                    'You complete the trip in the app - the server fixes the final fare.',
+                    'Complete the trip in the app to see the final fare.',
               ),
               DmStepRow(
                 index: 2,
                 icon: Icons.percent_rounded,
                 title: 'Platform fee ${summary.platformFeePercent}%',
                 body:
-                    'Deducted from the fare and shown on every breakdown. No hidden cuts.',
+                    'The fee is calculated from the fare and shown in the breakdown. It is not automatically collected.',
               ),
               const DmStepRow(
                 index: 3,
                 icon: Icons.account_balance_outlined,
                 title: 'Payout',
                 body:
-                    'Bank / UPI settlement is not live. These are ledger amounts, not transferred funds.',
+                    'The amounts shown are calculations, not proof of a bank transfer. UPI payments go directly to the driver and are confirmed manually.',
                 last: true,
               ),
               const SizedBox(height: 20),
@@ -307,10 +307,9 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen> {
                 ],
               const SizedBox(height: 18),
               const DmInfoBox(
-                icon: Icons.science_outlined,
+                icon: Icons.info_outline_rounded,
                 text:
-                    'Prototype build: fares and the platform fee are calculated by the server, but no money '
-                    'moves. Real payments, invoices and bank settlements are the next phase.',
+                    'Cash and direct UPI payments are recorded manually. The platform fee and driver share shown here are calculated amounts, not automatic transfers.',
               ),
             ]),
         ],

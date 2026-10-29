@@ -347,11 +347,9 @@ void main() {
     await settle(tester);
   }
 
-  testWidgets('Server connection is reachable before login', (tester) async {
+  testWidgets('Server connection is not shown before login', (tester) async {
     await showScreen(tester, const LoginScreen());
-    await tap(tester, 'Server connection');
-    expect(find.text('Test connection'), findsOneWidget);
-    expect(find.text('USB cable'), findsOneWidget);
+    expect(find.text('Server connection'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

@@ -8,13 +8,13 @@ from rest_framework.exceptions import APIException
 
 class EmailUnavailable(APIException):
     status_code = 503
-    default_detail = 'Email delivery is not configured or temporarily unavailable. Check backend SMTP settings.'
+    default_detail = 'Email delivery is temporarily unavailable. Please try again later.'
     default_code = 'email_unavailable'
 
 
 def ensure_email_ready():
     if settings.EMAIL_BACKEND.endswith(('console.EmailBackend','dummy.EmailBackend')):
-        raise EmailUnavailable('Email delivery is not configured. Configure SMTP; no email was sent.')
+        raise EmailUnavailable('Email delivery is temporarily unavailable. No email was sent. Please try again later.')
 
 
 def deliver(subject, body, email):
@@ -25,7 +25,7 @@ def deliver(subject, body, email):
     except EmailUnavailable:
         raise
     except Exception:
-        raise EmailUnavailable('Email could not be delivered. Check SMTP credentials/connectivity on the backend and retry.')
+        raise EmailUnavailable('Email could not be delivered. Please try again later.')
 
 
 def code_matches(stored, value):

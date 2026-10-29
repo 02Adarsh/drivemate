@@ -95,3 +95,7 @@ docs/       guides
   placeholders and must be reviewed for your launch jurisdiction.
 * Verification rules (minimum age, required documents, required training) are
   configuration, not hard-coded law.
+
+## Project submission and recent admin changes
+
+See [Design, database, Azure and security README](docs/submission/README.md).

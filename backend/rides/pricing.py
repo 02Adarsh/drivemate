@@ -43,9 +43,20 @@ def clamp_hours(hours) -> int:
     return max(1, min(MAX_HOURS, value))
 
 
+def service_config(service: str) -> dict:
+    """Read admin rates on every quote/booking, with old defaults as fallback."""
+    from .models import ServiceRate
+    key = service if service in SERVICE_PRICING else 'BOOK_NOW'
+    config = dict(SERVICE_PRICING[key])
+    row = ServiceRate.objects.filter(service=key).first()
+    if row:
+        config.update(base=row.base, per_hour=row.per_hour)
+    return config
+
+
 def estimate_fare(service: str, hours) -> Decimal:
     """Base + hourly rate for the requested duration."""
-    config = SERVICE_PRICING.get(service, SERVICE_PRICING['BOOK_NOW'])
+    config = service_config(service)
     duration = clamp_hours(hours)
     minimum = int(config['min_hours'])  # type: ignore[arg-type]
     billable = max(duration, minimum)
@@ -67,7 +78,7 @@ def platform_fee(fare, fee_percent: int = PLATFORM_FEE_PERCENT) -> Decimal:
 
 def fare_breakdown(service: str, hours) -> dict:
     """Everything the booking screen needs to explain the number it shows."""
-    config = SERVICE_PRICING.get(service, SERVICE_PRICING['BOOK_NOW'])
+    config = service_config(service)
     duration = clamp_hours(hours)
     minimum = int(config['min_hours'])  # type: ignore[arg-type]
     billable = max(duration, minimum)

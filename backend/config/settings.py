@@ -94,6 +94,18 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# Enforce HTTPS and secure cookies in production. When terminating TLS at a
+# trusted reverse proxy, enable TRUST_PROXY_HTTPS only if the proxy strips and
+# overwrites X-Forwarded-Proto on every incoming request.
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    if env_bool('TRUST_PROXY_HTTPS', False):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
 # --- Database -------------------------------------------------------------
 # Development: SQLite (no configuration needed).
 # Production (PostgreSQL example in .env):
@@ -117,6 +129,10 @@ else:
         }
     }
 
+# Azure PostgreSQL requires TLS; opt in explicitly for cloud deployments.
+if 'postgresql' in DB_ENGINE and env('DB_SSLMODE'):
+    DATABASES['default']['OPTIONS'] = {'sslmode': env('DB_SSLMODE')}
+
 AUTH_USER_MODEL = 'accounts.User'
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -139,6 +155,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = BASE_DIR / 'private_uploads'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB in memory, larger files spool to disk
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024  # allow 5 MB images + form fields
+
+# Optional private Azure Blob container. Application endpoints still authorize
+# downloads; never enable anonymous container access. Install requirements-cloud.txt.
+if env_bool('USE_AZURE_BLOB', False):
+    from django.core.exceptions import ImproperlyConfigured
+    if not env('AZURE_CONNECTION_STRING') or not env('AZURE_CONTAINER'):
+        raise ImproperlyConfigured('Set AZURE_CONNECTION_STRING and AZURE_CONTAINER for Blob storage.')
+    STORAGES = {
+        'default': {'BACKEND': 'storages.backends.azure_storage.AzureStorage', 'OPTIONS': {
+            'connection_string': env('AZURE_CONNECTION_STRING'),
+            'azure_container': env('AZURE_CONTAINER'),
+            'azure_ssl': True,
+            'overwrite_files': False,
+        }},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    }
+
 
 # --- CORS / API -----------------------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = DEBUG

@@ -37,9 +37,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       eyebrow: 'Your car stays yours',
       title: 'Your car.\nYour driver.\nYour rules.',
       body:
-          'DriveMate sends a verified professional driver to your location to drive the car you already own — never a rented taxi.',
+          'DriveMate connects you with a driver for the car you already own — not a rented taxi.',
       icon: Icons.directions_car_filled_rounded,
-      chips: ['Your vehicle', 'Verified driver'],
+      chips: ['Your vehicle', 'Driver booking'],
       bullets: [
         (Icons.pin_drop_outlined, 'Driver comes to your pickup point'),
         (Icons.timer_outlined, 'Hourly, full day, outstation or airport'),
@@ -47,14 +47,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ],
     ),
     const _OnboardPage(
-      eyebrow: 'Verified before they drive',
+      eyebrow: 'Driver applications',
       title: 'Trust is earned,\nnever assumed.',
       body:
-          'Every driver completes identity checks, licence verification and training before the account is approved. Approval and going online are separate steps.',
+          'Drivers provide identity and licence documents and complete a safety checklist as part of their application.',
       icon: Icons.verified_user_rounded,
-      chips: ['Licence checked', 'Training done'],
+      chips: ['Driver documents', 'Safety checklist'],
       bullets: [
-        (Icons.badge_outlined, 'Identity and licence documents reviewed'),
+        (Icons.badge_outlined, 'Identity and licence documents submitted for review'),
         (Icons.school_outlined, 'Safety and conduct training checklist'),
         (Icons.pin_outlined, 'Trip PIN verified before the drive starts'),
       ],
@@ -63,12 +63,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       eyebrow: 'Control from start to finish',
       title: 'You are in control\nof every trip.',
       body:
-          'Vehicle handover photos, a server-side trip timer, extension requests and a safety centre — for both the customer and the driver.',
+          'Keep track of bookings and access safety information throughout your trip.',
       icon: Icons.route_rounded,
-      chips: ['Trip timer', 'Safety centre'],
+      chips: ['Trip details', 'Safety centre'],
       bullets: [
-        (Icons.photo_camera_outlined, 'Before and after trip inspections'),
-        (Icons.shield_outlined, 'Emergency contacts and incident reporting'),
+        (Icons.pin_outlined, 'Trip PIN before the drive starts'),
+        (Icons.shield_outlined, 'Emergency contacts and safety information'),
         (Icons.history_rounded, 'Every booking and receipt in one place'),
       ],
     ),
