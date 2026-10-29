@@ -17,7 +17,7 @@ import '../widgets/dm_screen.dart';
 import '../widgets/dm_select_field.dart';
 import '../widgets/step_progress.dart';
 import 'driver_driving_details_screen.dart';
-import 'home_screen.dart';
+import 'login_screen.dart';
 
 /// DRIVER REGISTRATION — STEP 2 of 5: personal profile.
 ///
@@ -58,7 +58,8 @@ class _DriverPersonalProfileScreenState
   final _emergencyPhone = TextEditingController();
   final _intro = TextEditingController();
 
-  final Set<String> _languages = const {};
+  final Set<String> _languages = <String>{};
+  bool _languagesEdited = false;
   String? _state;
   String? _city;
   XFile? _photo;
@@ -92,11 +93,18 @@ class _DriverPersonalProfileScreenState
         final city = (profile['city'] ?? '').toString();
         if (city.isNotEmpty) _city = city;
 
+        // The API currently returns a comma-separated string. Accept lists as
+        // well, and don't overwrite a selection made while the request ran.
         final languages = profile['languages'];
-        if (languages is List && languages.isNotEmpty) {
+        if (!_languagesEdited && (languages is String || languages is List)) {
+          final values = languages is String
+              ? languages.split(',')
+              : (languages as List).map((language) => language.toString());
           _languages
             ..clear()
-            ..addAll(languages.map((language) => language.toString()));
+            ..addAll(values
+                .map((language) => language.trim())
+                .where((language) => language.isNotEmpty));
         }
         final dob = (profile['date_of_birth'] ?? '').toString();
         if (dob.isNotEmpty) _dob = DateTime.tryParse(dob);
@@ -258,8 +266,8 @@ class _DriverPersonalProfileScreenState
     return DmScreen(
       showBack: true,
       // Always goes somewhere useful: back to the previous screen when there is
-      // one, otherwise to the driver dashboard (where "Continue" resumes here).
-      backFallback: HomeScreen(role: 'Driver', name: widget.name),
+      // one, otherwise to sign-in. Incomplete applications do not open the dashboard.
+      backFallback: const LoginScreen(role: 'DRIVER'),
       // Tells the dashboard "details may have changed" so it refreshes.
       backResult: true,
       child: Form(
@@ -393,6 +401,7 @@ class _DriverPersonalProfileScreenState
                         label: language,
                         selected: _languages.contains(language),
                         onSelected: (selected) => setState(() {
+                          _languagesEdited = true;
                           if (selected) {
                             _languages.add(language);
                           } else {

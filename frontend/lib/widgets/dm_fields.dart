@@ -247,8 +247,8 @@ class DmSelectChip extends StatelessWidget {
         ),
       ),
       backgroundColor: panel,
-      selectedColor: red.withValues(alpha: 0.22),
-      side: BorderSide(color: selected ? red.withValues(alpha: 0.7) : hairline),
+      selectedColor: redDeep,
+      side: BorderSide(color: selected ? redDeep : hairline),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     );
