@@ -1,8 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Needed for API calls, photo/document upload and (later) live updates. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:label="drivemate"
+        android:label="DriveMate"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        <!--
+            usesCleartextTraffic is enabled so a phone can reach the Django
+            development server over plain HTTP on your local network
+            (for example http://192.168.1.20:8000).
+
+            BEFORE PUBLISHING: serve the API over HTTPS and remove this line
+            (or add a network security config that only allows your dev host).
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -37,6 +54,10 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="upi"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="tel"/></intent>
+        <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="https"/></intent>
+        <intent><action android:name="android.intent.action.SENDTO"/><data android:scheme="mailto"/></intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

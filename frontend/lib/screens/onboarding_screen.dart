@@ -1,119 +1,465 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
-import '../widgets/brand_mark.dart';
-import 'auth_screen.dart';
 
+import '../theme/dm_theme.dart';
+import '../widgets/auth_backdrop.dart';
+import '../widgets/brand_header.dart';
+import '../services/navigation.dart';
+import '../widgets/dm_animations.dart';
+import '../widgets/slide_to_start.dart';
+import 'login_screen.dart';
+import 'register_screen.dart';
+
+// Kept exported for backwards compatibility: older screens imported
+// `CinematicBackdrop` and `OnboardingScreen` from this file.
+export '../widgets/auth_backdrop.dart' show CinematicBackdrop;
+
+/// Three-page introduction, redesigned.
+///
+/// Page 3 fixes the earlier "slide to get started does nothing" problem:
+///   * the PageView is frozen on the last page so its gesture cannot swallow
+///     the slide gesture,
+///   * the slider itself now accumulates drag deltas and also reacts to a tap,
+///   * explicit "Log in" / "Create account" links sit under the slider so
+///     nobody depends on finding the gesture.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
+
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerProviderStateMixin {
-  final pager = PageController();
-  int index = 0;
-  final items = <({IconData icon, String title, String copy})>[
-    (icon: Icons.route_rounded, title: 'Your ride,\nour priority.', copy: 'A professional driver comes to you and drives the car you own.'),
-    (icon: Icons.verified_user_outlined, title: 'Your car.\nYour control.', copy: 'Choose your vehicle, plan your trip and stay in control from pickup to drop-off.'),
-    (icon: Icons.nightlight_round, title: 'Move with\npeace of mind.', copy: 'Clear booking details, driver identity checks and trip updates in one place.'),
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pager = PageController();
+  int _index = 0;
+
+  static final List<_OnboardPage> _pages = [
+    const _OnboardPage(
+      eyebrow: 'Your car stays yours',
+      title: 'Your car.\nYour driver.\nYour rules.',
+      body:
+          'DriveMate sends a verified professional driver to your location to drive the car you already own — never a rented taxi.',
+      icon: Icons.directions_car_filled_rounded,
+      chips: ['Your vehicle', 'Verified driver'],
+      bullets: [
+        (Icons.pin_drop_outlined, 'Driver comes to your pickup point'),
+        (Icons.timer_outlined, 'Hourly, full day, outstation or airport'),
+        (Icons.receipt_long_outlined, 'Clear estimate before you confirm'),
+      ],
+    ),
+    const _OnboardPage(
+      eyebrow: 'Verified before they drive',
+      title: 'Trust is earned,\nnever assumed.',
+      body:
+          'Every driver completes identity checks, licence verification and training before the account is approved. Approval and going online are separate steps.',
+      icon: Icons.verified_user_rounded,
+      chips: ['Licence checked', 'Training done'],
+      bullets: [
+        (Icons.badge_outlined, 'Identity and licence documents reviewed'),
+        (Icons.school_outlined, 'Safety and conduct training checklist'),
+        (Icons.pin_outlined, 'Trip PIN verified before the drive starts'),
+      ],
+    ),
+    const _OnboardPage(
+      eyebrow: 'Control from start to finish',
+      title: 'You are in control\nof every trip.',
+      body:
+          'Vehicle handover photos, a server-side trip timer, extension requests and a safety centre — for both the customer and the driver.',
+      icon: Icons.route_rounded,
+      chips: ['Trip timer', 'Safety centre'],
+      bullets: [
+        (Icons.photo_camera_outlined, 'Before and after trip inspections'),
+        (Icons.shield_outlined, 'Emergency contacts and incident reporting'),
+        (Icons.history_rounded, 'Every booking and receipt in one place'),
+      ],
+    ),
   ];
-  void start() => Navigator.pushReplacement(context, PageRouteBuilder(pageBuilder: (_, animation, secondary) => const AuthScreen(), transitionsBuilder: (_, animation, secondary, child) => SlideTransition(position: Tween<Offset>(begin: const Offset(.1, 0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)), child: FadeTransition(opacity: animation, child: child)), transitionDuration: const Duration(milliseconds: 380)));
+
+  void _goToAuth({required bool signup}) {
+    Navigator.of(context).pushReplacement(
+      dmRoute(signup
+          ? const RegisterScreen(role: 'CUSTOMER')
+          : const LoginScreen(role: 'CUSTOMER')),
+    );
+  }
 
   @override
-  void dispose() { pager.dispose(); super.dispose(); }
+  void dispose() {
+    _pager.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    final isLast = _index == _pages.length - 1;
+
     return Scaffold(
-      body: Stack(children: [
-        const Positioned.fill(child: CinematicBackdrop()),
-        SafeArea(child: Column(children: [
-          Padding(padding: const EdgeInsets.fromLTRB(24, 16, 24, 0), child: Row(children: [
-            const BrandMark(size: 42), const SizedBox(width: 10),
-            const Text('DriveMate', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-            const Spacer(), Text('${index + 1} / 3', style: const TextStyle(color: muted, fontSize: 12)),
-          ])),
-          Expanded(child: PageView.builder(
-            controller: pager,
-            itemCount: items.length,
-            onPageChanged: (v) => setState(() => index = v),
-            itemBuilder: (context, i) {
-              final item = items[i];
-              return Padding(padding: const EdgeInsets.fromLTRB(26, 34, 26, 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Spacer(),
-                Container(width: 54, height: 54, decoration: BoxDecoration(color: red.withOpacity(.13), borderRadius: BorderRadius.circular(17)), child: Icon(item.icon, color: red, size: 27)),
-                const SizedBox(height: 24),
-                Text(item.title, style: const TextStyle(fontSize: 39, height: 1.08, fontWeight: FontWeight.w800, letterSpacing: -1.3)),
-                const SizedBox(height: 14),
-                Text(item.copy, style: const TextStyle(color: Color(0xFFBBC0C9), fontSize: 15, height: 1.55)),
-                const SizedBox(height: 28),
-                Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white.withOpacity(.055), border: Border.all(color: Colors.white.withOpacity(.1)), borderRadius: BorderRadius.circular(18)), child: const Row(children: [Icon(Icons.directions_car_filled_rounded, color: red), SizedBox(width: 11), Expanded(child: Text('We provide the driver. The car is always yours.', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)))])),
-                const Spacer(flex: 2),
-              ]));
-            },
-          )),
-          Padding(padding: const EdgeInsets.fromLTRB(25, 4, 25, 20), child: index < 2
-              ? Row(children: [
-                  ...List.generate(3, (i) => AnimatedContainer(duration: const Duration(milliseconds: 220), margin: const EdgeInsets.only(right: 6), width: i == index ? 24 : 7, height: 7, decoration: BoxDecoration(color: i == index ? red : Colors.white24, borderRadius: BorderRadius.circular(9)))),
-                  const Spacer(),
-                  TextButton(onPressed: start, child: const Text('Skip', style: TextStyle(color: muted))),
-                  const SizedBox(width: 6),
-                  FilledButton(onPressed: () => pager.nextPage(duration: const Duration(milliseconds: 350), curve: Curves.easeOut), style: FilledButton.styleFrom(backgroundColor: red, foregroundColor: Colors.white, shape: const CircleBorder(), padding: const EdgeInsets.all(15)), child: const Icon(Icons.arrow_forward_rounded)),
-                ])
-              : _SlideToStart(onComplete: start)),
-        ])),
-      ]),
+      backgroundColor: navy,
+      body: Stack(
+        children: [
+          const Positioned.fill(child: CinematicBackdrop()),
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 12, 16, 0),
+                  child: BrandHeader(
+                    markSize: 40,
+                    trailing: Row(
+                      children: [
+                        Text('${_index + 1}/${_pages.length}',
+                            style: dmCaption(size: 11)),
+                        const SizedBox(width: 6),
+                        TextButton(
+                          onPressed: () => _goToAuth(signup: false),
+                          child: Text('Skip',
+                              style:
+                                  dmCaption(size: 12).copyWith(color: muted)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pager,
+                    itemCount: _pages.length,
+                    // Frozen on the last page: nothing competes with the slide gesture.
+                    physics: isLast
+                        ? const NeverScrollableScrollPhysics()
+                        : const BouncingScrollPhysics(),
+                    onPageChanged: (value) => setState(() => _index = value),
+                    itemBuilder: (context, index) =>
+                        _PageBody(page: _pages[index]),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 4, 22, 18),
+                  child: isLast
+                      ? Column(
+                          children: [
+                            SlideToStart(
+                              onCompleted: () => _goToAuth(signup: false),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _TextLink(
+                                  text: 'New here? Create an account',
+                                  onTap: () => _goToAuth(signup: true),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                    width: 1, height: 12, color: hairline),
+                                const SizedBox(width: 10),
+                                _TextLink(
+                                    text: 'Log in',
+                                    onTap: () => _goToAuth(signup: false)),
+                              ],
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            // Dots
+                            ...List.generate(_pages.length, (dot) {
+                              final active = dot == _index;
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 240),
+                                margin: const EdgeInsets.only(right: 6),
+                                width: active ? 26 : 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: active
+                                      ? red
+                                      : Colors.white.withValues(alpha: 0.20),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              );
+                            }),
+                            const Spacer(),
+                            if (_index > 0)
+                              IconButton(
+                                onPressed: () => _pager.previousPage(
+                                  duration: const Duration(milliseconds: 280),
+                                  curve: Curves.easeOutCubic,
+                                ),
+                                icon: Icon(Icons.arrow_back_rounded,
+                                    size: 20, color: muted),
+                              ),
+                            FilledButton(
+                              onPressed: () => _pager.nextPage(
+                                duration: const Duration(milliseconds: 320),
+                                curve: Curves.easeOutCubic,
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: red,
+                                shape: const CircleBorder(),
+                                padding: const EdgeInsets.all(16),
+                                minimumSize: const Size(0, 0),
+                              ),
+                              child: const Icon(Icons.arrow_forward_rounded,
+                                  size: 20),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SlideToStart extends StatefulWidget {
-  final VoidCallback onComplete;
-  const _SlideToStart({required this.onComplete});
+class _TextLink extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+  const _TextLink({required this.text, required this.onTap});
+
   @override
-  State<_SlideToStart> createState() => _SlideToStartState();
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(
+        text,
+        style: const TextStyle(
+            fontSize: 11.8, fontWeight: FontWeight.w600, color: red),
+      ),
+    );
+  }
 }
 
-class _SlideToStartState extends State<_SlideToStart> {
-  double value = 0;
-  bool started = false;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
-    final max = constraints.maxWidth - 56;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onHorizontalDragUpdate: (details) {
-        setState(() => value = ((details.localPosition.dx - 24) / max).clamp(0, 1));
-        if (value > .88 && !started) { started = true; widget.onComplete(); }
-      },
-      onHorizontalDragEnd: (_) { if (value < .88) setState(() => value = 0); },
-      child: Container(height: 58, decoration: BoxDecoration(color: panel2, borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white12)), child: Stack(alignment: Alignment.center, children: [
-        const Text('SLIDE TO GET STARTED', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
-        Positioned(left: value * max, child: IgnorePointer(child: Container(width: 48, height: 48, decoration: BoxDecoration(color: red, borderRadius: BorderRadius.circular(26)), child: const Icon(Icons.double_arrow_rounded, color: Colors.white)))),
-      ])),
-    );
+class _OnboardPage {
+  final String eyebrow;
+  final String title;
+  final String body;
+  final IconData icon;
+  final List<String> chips;
+  final List<(IconData, String)> bullets;
+
+  const _OnboardPage({
+    required this.eyebrow,
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.chips,
+    required this.bullets,
   });
 }
 
-class CinematicBackdrop extends StatefulWidget {
-  const CinematicBackdrop({super.key});
+class _PageBody extends StatelessWidget {
+  final _OnboardPage page;
+  const _PageBody({required this.page});
+
   @override
-  State<CinematicBackdrop> createState() => _CinematicBackdropState();
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DmEntrance(child: _SceneCard(icon: page.icon, chips: page.chips)),
+          const SizedBox(height: 26),
+          DmEntrance(
+              delay: 70,
+              child: Text(page.eyebrow.toUpperCase(), style: dmSectionLabel())),
+          const SizedBox(height: 10),
+          DmEntrance(
+              delay: 120,
+              child:
+                  Text(page.title, style: dmHeading(size: 34, height: 1.10))),
+          const SizedBox(height: 12),
+          DmEntrance(
+              delay: 170,
+              child: Text(page.body, style: dmSubtitle(size: 13.6))),
+          const SizedBox(height: 20),
+          ...page.bullets.map(
+            (bullet) => Padding(
+              padding: const EdgeInsets.only(bottom: 11),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: red.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(bullet.$1, size: 16, color: red),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Text(
+                        bullet.$2,
+                        style: TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: softWhite.withValues(alpha: 0.86)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _CinematicBackdropState extends State<CinematicBackdrop> with SingleTickerProviderStateMixin {
-  late final AnimationController controller;
+/// Illustration card: gradient panel, soft glow, main icon and floating chips.
+class _SceneCard extends StatelessWidget {
+  final IconData icon;
+  final List<String> chips;
+  const _SceneCard({required this.icon, required this.chips});
+
   @override
-  void initState() { super.initState(); controller = AnimationController(vsync: this, duration: const Duration(seconds: 18))..repeat(reverse: true); }
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return Container(
+      height: 216,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF26141A), Color(0xFF14171D)],
+        ),
+        border: Border.all(color: red.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 30,
+              offset: const Offset(0, 14))
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Glow + dotted route line
+          Positioned(
+            right: -40,
+            top: -40,
+            child: Container(
+              width: 190,
+              height: 190,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  red.withValues(alpha: 0.30),
+                  red.withValues(alpha: 0)
+                ]),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: CustomPaint(painter: _RoutePainter()),
+          ),
+          Center(
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.35),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+              ),
+              child: Icon(icon, size: 44, color: red),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            bottom: 16,
+            child: _Chip(text: chips.first, icon: Icons.check_circle_rounded),
+          ),
+          Positioned(
+            right: 16,
+            top: 16,
+            child: _Chip(text: chips.last, icon: Icons.bolt_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  const _Chip({required this.text, required this.icon});
+
   @override
-  void dispose() { controller.dispose(); super.dispose(); }
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: red),
+          const SizedBox(width: 6),
+          Text(text,
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: softWhite)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoutePainter extends CustomPainter {
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: controller,
-    builder: (context, child) => ClipRect(child: Stack(fit: StackFit.expand, children: [
-      Transform.scale(scale: 1.04 + controller.value * .035, child: Image.asset('assets/images/night_drive.jpg', fit: BoxFit.cover)),
-      Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [const Color(0xCC080A0D), const Color(0x75080A0D), const Color(0xEA080A0D)], stops: const [0, .42, 1]))),
-      Container(color: red.withOpacity(.035 + controller.value * .025)),
-    ])),
-  );
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = red.withValues(alpha: 0.30)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+
+    final path = Path()
+      ..moveTo(size.width * 0.10, size.height * 0.80)
+      ..quadraticBezierTo(size.width * 0.35, size.height * 0.30,
+          size.width * 0.62, size.height * 0.62)
+      ..quadraticBezierTo(size.width * 0.80, size.height * 0.85,
+          size.width * 0.95, size.height * 0.35);
+
+    final dashed = _dashPath(path, dash: 7, gap: 7);
+    canvas.drawPath(dashed, paint);
+
+    canvas.drawCircle(
+        Offset(size.width * 0.10, size.height * 0.80), 4, Paint()..color = red);
+    canvas.drawCircle(Offset(size.width * 0.95, size.height * 0.35), 4,
+        Paint()..color = Colors.white70);
+  }
+
+  Path _dashPath(Path source, {required double dash, required double gap}) {
+    final dest = Path();
+    for (final metric in source.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = (distance + dash).clamp(0.0, metric.length);
+        dest.addPath(metric.extractPath(distance, next), Offset.zero);
+        distance = next + gap;
+      }
+    }
+    return dest;
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

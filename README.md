@@ -1,47 +1,97 @@
-# DriveMate — Phase 1: Splash + role selection + email auth
+> **Latest: V9.1 direct-UPI update (API 10).** Driver receiving QR/ID setup,
+> final-fare QR and explicitly manual confirmation: read
+> [`docs/DIRECT_UPI_PAYMENT.md`](docs/DIRECT_UPI_PAYMENT.md) and
+> [`README_UPDATE.md`](README_UPDATE.md). Includes V9 UI/map/OTP/account features.
+> Start with `tools/run_backend.ps1`, then `tools/run_phone.ps1 -Usb`.
+> External UPI amount-edit controls/automatic bank verification are NOT guaranteed
+> by a personal QR; merchant integration is needed for those.
 
-A Flutter mobile app with a Django REST backend. This first increment intentionally implements only the entry/authentication flow; customer and driver dashboards/profile steps come next.
 
-## Included
-- Branded splash and original vector-style DriveMate mark (no image upload was present in the workspace).
-- Role choice: Customer, Driver, Admin. Admin is sign-in only and is never granted by public signup.
-- Email/password signup and login, email OTP verification, resend OTP.
-- Django password hashing, JWT access/refresh tokens, rate limiting, validation, role separation.
-- Development mode logs OTP to Django console. This is not real email delivery.
 
-## Backend setup (Python 3.10+)
+# DriveMate
+
+**A verified professional driver comes to you and drives the car you own.**
+The customer never books a car from the platform — the customer's own vehicle is
+the vehicle being driven.
+
+This repository holds the Flutter mobile app and the Django REST backend.
+
+## Current build
+
+| Area | State |
+|---|---|
+| Customer registration, OTP, profile | ✅ done |
+| Driver registration (5 steps: account → personal → driving → documents/consent/training → admin verification) | ✅ done |
+| Admin verification (Django admin + staff API) | ✅ done |
+| Login / register / onboarding / splash UI matched to the reference design | ✅ done |
+| Driver dashboard, customer dashboard | 🟡 shell — says clearly what is live and what is next |
+| Booking, 500 m matching, live GPS, timer, inspections, payments, ratings, disputes, admin dashboard | ⏭ next phases |
+
+Nothing in this build fakes a feature. Where a real integration is missing
+(maps, payments, SMS, push) the screen says so, and the code keeps a clean
+service boundary for it.
+
+## Quick start
+
 ```bash
+# 1. backend
 cd backend
 python -m venv .venv
-# Windows: .venv\\Scripts\\activate
-# macOS/Linux: source .venv/bin/activate
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-copy .env.example .env   # Windows; macOS/Linux: cp .env.example .env
+cp .env.example .env                # Windows: copy .env.example .env
 python manage.py migrate
+python manage.py seed_demo_data     # optional demo accounts
+python manage.py createsuperuser --email admin@drivemate.in --full_name "Platform Admin"
 python manage.py runserver 0.0.0.0:8000
-```
-The API defaults to development SQLite. For an Android emulator use `http://10.0.2.2:8000/api`; for a physical phone use your computer's LAN IPv4 address (same Wi-Fi), e.g. `http://192.168.1.20:8000/api`. Set `API_BASE_URL` in `frontend/lib/config.dart` accordingly. Allow port 8000 through the computer firewall if needed.
 
-## Flutter setup and USB phone
-Install Flutter SDK and Android Studio/Android SDK; enable Developer options > USB debugging on the phone, connect USB and accept the authorization prompt. From `frontend`:
-```bash
+# 2. app (phone connected by USB with debugging enabled)
+adb reverse tcp:8000 tcp:8000
+cd ../frontend
 flutter pub get
-flutter devices
 flutter run
 ```
-For an installable debug APK: `flutter build apk --debug`; APK is at `build/app/outputs/flutter-apk/app-debug.apk`.
 
-## Test
-1. Start backend, then Flutter app.
-2. Select Customer or Driver, choose Create account, use an email and password (min 8 chars).
-3. Read the OTP in the backend terminal (DEVELOPMENT ONLY), enter it, then login.
-4. Admin is sign-in only; create an admin using Django shell and set role to ADMIN, never by public registration.
+Set `apiBaseUrl` in `frontend/lib/config.dart` (`http://127.0.0.1:8000/api`
+after `adb reverse`, otherwise your computer's LAN IP).
 
-## Production integration roadmap
-- Replace console email with verified SMTP/provider in environment variables; configure SPF/DKIM and abuse controls.
-- Google sign-in requires OAuth client IDs, Android SHA fingerprints and backend token verification; the button is intentionally marked as a future hookup and does not claim to authenticate yet.
-- Use PostgreSQL via `DATABASE_URL`, HTTPS, secure secret management, production CORS, monitoring and account recovery before launch.
-- Add subsequent features incrementally: driver personal profile, driving details, private documents and admin review, then customer vehicles and booking flow. Policies and eligibility rules must be reviewed for the launch jurisdiction.
+## Tests
 
-## Folder layout
-`frontend/` Flutter app. `backend/` Django REST API. See `.env.example` for backend settings.
+```bash
+cd backend  && python manage.py test accounts -v 1   # 8 API tests
+cd frontend && flutter analyze && flutter test       # clean + 5 widget tests
+```
+
+## Documentation
+
+| File | Content |
+|---|---|
+| `docs/RUN_AND_TEST.md` | VS Code + USB phone commands, demo accounts, troubleshooting |
+| `docs/API.md` | Every endpoint, payloads, error format |
+| `docs/DRIVER_REGISTRATION.md` | The five steps, mandatory rules, statuses, admin review |
+| `README_UPDATE.md` | What changed in the latest update |
+
+## Project layout
+
+```
+backend/    Django REST API
+  accounts/ models, progress rules, views, serializers, admin, tests, seed command
+  config/   settings, urls
+frontend/   Flutter app
+  lib/theme      design tokens
+  lib/widgets    reusable UI (brand header, fields, buttons, slider, step header)
+  lib/services   API client + navigation rules
+  lib/screens    splash, onboarding, login, register, OTP, driver 5-step wizard, dashboards
+  lib/utils      validators
+docs/       guides
+```
+
+## Safety and honesty notes
+
+* Approval and "online" are separate states — approval alone never puts a driver
+  in front of customers.
+* Driver documents live in private storage; only staff can open them.
+* Legal texts (terms, privacy, cancellation, damage policy) are clearly marked
+  placeholders and must be reviewed for your launch jurisdiction.
+* Verification rules (minimum age, required documents, required training) are
+  configuration, not hard-coded law.

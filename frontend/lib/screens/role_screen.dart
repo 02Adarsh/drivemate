@@ -1,57 +1,156 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
-import '../widgets/brand_mark.dart';
-import 'auth_screen.dart';
-import 'onboarding_screen.dart';
 
+import '../services/navigation.dart';
+import '../theme/dm_theme.dart';
+import 'onboarding_screen.dart';
+import '../widgets/brand_header.dart';
+import '../widgets/dm_buttons.dart';
+import '../widgets/dm_screen.dart';
+import 'login_screen.dart';
+import 'register_screen.dart';
+
+/// Role gateway.
+///
+/// The normal path is: introduction pages -> login/register with a Rider or
+/// Driver switch. This screen still exists because the administrator account
+/// signs in from here (admin accounts are created by staff, never by public
+/// signup).
 class RoleScreen extends StatelessWidget {
   const RoleScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(children: [
-        const Positioned.fill(child: CinematicBackdrop()),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const BrandMark(size: 74),
-              const Spacer(),
-              const Text('Welcome to\nDriveMate.', style: TextStyle(fontSize: 37, height: 1.12, fontWeight: FontWeight.w800, letterSpacing: -1)),
-              const SizedBox(height: 10),
-              const Text('Choose how you want to continue.', style: TextStyle(color: muted, fontSize: 14)),
-              const SizedBox(height: 27),
-              const _RoleCard(icon: Icons.person_outline_rounded, title: 'I need a driver', subtitle: 'A professional drives your own car.', role: 'CUSTOMER'),
-              const SizedBox(height: 12),
-              const _RoleCard(icon: Icons.directions_car_outlined, title: 'I want to drive', subtitle: 'Apply to become a DriveMate driver.', role: 'DRIVER'),
-              const SizedBox(height: 12),
-              const _RoleCard(icon: Icons.admin_panel_settings_outlined, title: 'Administrator', subtitle: 'Restricted staff sign-in.', role: 'ADMIN'),
-              const Spacer(),
-              const Center(child: Text('YOUR CAR. YOUR DESTINATION. YOUR DRIVER.', style: TextStyle(color: muted, fontSize: 9, letterSpacing: 1.2, fontWeight: FontWeight.w600))),
-            ]),
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return DmScreen(
+      showBack: true,
+      backFallback: const OnboardingScreen(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const BrandHeader(markSize: 44),
+          const SizedBox(height: 30),
+          Text('Continue as', style: dmHeading(size: 27)),
+          const SizedBox(height: 7),
+          Text('Choose the account type you want to open.',
+              style: dmSubtitle(size: 13.2)),
+          const SizedBox(height: 24),
+          _RoleCard(
+            icon: Icons.directions_car_outlined,
+            title: 'I need a driver',
+            subtitle: 'A verified professional drives the car you own.',
+            onLogin: () => Navigator.of(context)
+                .pushReplacement(dmRoute(const LoginScreen(role: 'CUSTOMER'))),
+            onRegister: () => Navigator.of(context).pushReplacement(
+                dmRoute(const RegisterScreen(role: 'CUSTOMER'))),
           ),
-        ),
-      ]),
+          const SizedBox(height: 12),
+          _RoleCard(
+            icon: Icons.person_pin_circle_outlined,
+            title: 'I want to drive',
+            subtitle: 'Apply to become a DriveMate driver.',
+            onLogin: () => Navigator.of(context)
+                .pushReplacement(dmRoute(const LoginScreen(role: 'DRIVER'))),
+            onRegister: () => Navigator.of(context)
+                .pushReplacement(dmRoute(const RegisterScreen(role: 'DRIVER'))),
+          ),
+          const SizedBox(height: 12),
+          _RoleCard(
+            icon: Icons.admin_panel_settings_outlined,
+            title: 'Administrator',
+            subtitle: 'Restricted staff access. No public signup.',
+            onLogin: () => Navigator.of(context)
+                .pushReplacement(dmRoute(const LoginScreen(role: 'ADMIN'))),
+          ),
+          const SizedBox(height: 22),
+          const DmInfoBox(
+            icon: Icons.lock_outline_rounded,
+            text: 'Administrator accounts are created on the server with '
+                '"python manage.py createsuperuser". The app never grants admin access by itself.',
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _RoleCard extends StatelessWidget {
-  final IconData icon; final String title, subtitle, role;
-  const _RoleCard({required this.icon, required this.title, required this.subtitle, required this.role});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onLogin;
+  final VoidCallback? onRegister;
+
+  const _RoleCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onLogin,
+    this.onRegister,
+  });
+
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthScreen(role: role))),
-    borderRadius: BorderRadius.circular(18),
-    child: Container(
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return Container(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(color: const Color(0xCC171A20), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(.09))),
-      child: Row(children: [
-        Container(width: 46, height: 46, decoration: BoxDecoration(color: red.withOpacity(.13), borderRadius: BorderRadius.circular(14)), child: Icon(icon, color: red)),
-        const SizedBox(width: 13),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)), const SizedBox(height: 3), Text(subtitle, style: const TextStyle(color: muted, fontSize: 11))])),
-        const Icon(Icons.arrow_forward_ios, size: 15, color: red),
-      ]),
-    ),
-  );
+      decoration: BoxDecoration(
+        color: panel,
+        borderRadius: BorderRadius.circular(radiusCard),
+        border: Border.all(color: hairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: red.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(icon, color: red, size: 21),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: dmCaption(size: 11.4)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onLogin,
+                  child: const Text('Log in'),
+                ),
+              ),
+              if (onRegister != null) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onRegister,
+                    style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50)),
+                    child: const Text('Create account'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

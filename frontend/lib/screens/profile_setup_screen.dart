@@ -1,97 +1,355 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import '../main.dart';
-import '../services/auth_service.dart';
-import 'driver_documents_screen.dart';
-import 'home_screen.dart';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../data/india_locations.dart';
+import '../services/auth_service.dart';
+import '../services/navigation.dart';
+import '../theme/dm_theme.dart';
+import '../utils/validators.dart';
+import '../widgets/dm_animations.dart';
+import '../widgets/dm_buttons.dart';
+import '../widgets/dm_feedback.dart';
+import '../widgets/dm_fields.dart';
+import '../widgets/dm_screen.dart';
+import '../widgets/dm_select_field.dart';
+import '../widgets/step_progress.dart';
+import 'driver_personal_profile_screen.dart';
+import 'home_screen.dart';
+import 'login_screen.dart';
+
+/// Rider profile completion: photo, address, state → city, PIN code and an
+/// emergency contact. Drivers are forwarded into the driver wizard instead, so
+/// both roles always land on the right screen.
 class ProfileSetupScreen extends StatefulWidget {
-  final String name, role;
-  const ProfileSetupScreen({super.key, required this.name, required this.role});
-  @override State<ProfileSetupScreen> createState()=>_ProfileSetupScreenState();
-}
-class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
-  final form=GlobalKey<FormState>(); final picker=ImagePicker();
-  final address=TextEditingController(),city=TextEditingController(),emergencyName=TextEditingController(),emergencyPhone=TextEditingController(),languages=TextEditingController(),intro=TextEditingController(),licence=TextEditingController(),experience=TextEditingController();
-  final skills=<String,bool>{'manual_transmission':false,'automatic_transmission':false,'sedan':false,'suv':false,'luxury':false,'highway':false,'night_driving':false,'outstation':false};
-  XFile? photo; DateTime? dob,licenceExpiry; int step=0; bool saving=false;
-  bool get driver=>widget.role=='DRIVER';
-  @override void dispose(){address.dispose();city.dispose();emergencyName.dispose();emergencyPhone.dispose();languages.dispose();intro.dispose();licence.dispose();experience.dispose();super.dispose();}
-  bool get adult {if(dob==null)return false;final n=DateTime.now();var age=n.year-dob!.year;if(n.month<dob!.month||(n.month==dob!.month&&n.day<dob!.day))age--;return age>=18;}
-  Future<void> pickPhoto() async {final f=await picker.pickImage(source:ImageSource.gallery,maxWidth:1400,imageQuality:82);if(f!=null)setState(()=>photo=f);}
-  Future<void> pickDate({required bool birth}) async {final now=DateTime.now();final selected=await showDatePicker(context:context,initialDate:birth?(dob??DateTime(now.year-25,1,1)):(licenceExpiry??now.add(const Duration(days:365))),firstDate:birth?DateTime(1930):now,lastDate:birth?DateTime(now.year-16):DateTime(now.year+30),builder:(c,child)=>Theme(data:ThemeData.dark().copyWith(colorScheme:const ColorScheme.dark(primary:red,surface:panel)),child:child!));if(selected!=null)setState(()=>birth?dob=selected:licenceExpiry=selected);}
-  String iso(DateTime? d)=>d==null?'':'${d.year.toString().padLeft(4,'0')}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
-  Future<void> save() async {
-    if(!form.currentState!.validate())return;
-    if(photo==null){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Please add a profile photo to continue.')));return;}
-    if(driver&&step==0){if(!adult){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Driver applicants must be 18 or older.')));return;}setState(()=>step=1);return;}
-    if(driver&&!adult){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Driver applicants must be 18 or older.')));return;}
-    if(driver&&(licenceExpiry==null||licence.text.trim().isEmpty)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Enter licence number and expiry date.')));return;}
-    if(driver&&!skills.values.any((value)=>value)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Select at least one driving capability.')));return;}
-    setState(()=>saving=true);
-    try {
-      await AuthService.uploadPrivateFile('profile/photo/',photo!.path);
-      final data=<String,dynamic>{'address':address.text.trim(),'city':city.text.trim(),'emergency_contact_name':emergencyName.text.trim(),'emergency_contact_phone':emergencyPhone.text.trim()};
-      if(driver)data.addAll({'date_of_birth':iso(dob),'languages':languages.text.trim(),'introduction':intro.text.trim(),'licence_number':licence.text.trim(),'licence_expiry':iso(licenceExpiry),'experience_years':int.parse(experience.text),...skills});
-      await AuthService.saveProfile(data);if(!mounted)return;
-      if(driver){Navigator.pushReplacement(context,_animatedRoute(DriverDocumentsScreen(name:widget.name)));}
-      else{Navigator.pushAndRemoveUntil(context,_animatedRoute(HomeScreen(role:'Customer',name:widget.name)),(_)=>false);}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ','')),backgroundColor:red));}
-    finally{if(mounted)setState(()=>saving=false);}
-  }
-  PageRoute<T> _animatedRoute<T>(Widget page)=>PageRouteBuilder<T>(pageBuilder:(_,a,b)=>page,transitionsBuilder:(_,a,b,child)=>SlideTransition(position:Tween<Offset>(begin:const Offset(.08,0),end:Offset.zero).animate(CurvedAnimation(parent:a,curve:Curves.easeOutCubic)),child:FadeTransition(opacity:a,child:child)),transitionDuration:const Duration(milliseconds:350));
-  String? requiredText(String? value,String label)=>value==null||value.trim().isEmpty?'$label is required':null;
+  final String name;
+  final String role;
+  const ProfileSetupScreen(
+      {super.key, required this.name, this.role = 'CUSTOMER'});
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(onPressed: () => step == 1 && driver ? setState(() => step = 0) : Navigator.pop(context), icon: const Icon(Icons.arrow_back)),
-        title: Text(driver ? 'Driver application' : 'Rider profile', style: const TextStyle(fontWeight: FontWeight.w700)),
-      ),
-      body: Form(
-        key: form,
-        child: ListView(padding: const EdgeInsets.fromLTRB(22, 8, 22, 30), children: [
-          _progress(),
-          Text(driver ? (step == 0 ? 'Personal details' : 'Driving details') : 'Your profile', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(driver ? 'All fields are required before continuing. Drivers must be at least 18.' : 'Complete your required profile details.', style: const TextStyle(color: muted, fontSize: 12)),
-          const SizedBox(height: 18),
-          Center(child: GestureDetector(onTap: pickPhoto, child: Stack(children: [
-            CircleAvatar(radius: 48, backgroundColor: panel, backgroundImage: photo == null ? null : FileImage(File(photo!.path)), child: photo == null ? const Icon(Icons.add_a_photo_outlined, color: red, size: 27) : null),
-            Positioned(right: 0, bottom: 0, child: Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: red, shape: BoxShape.circle), child: const Icon(Icons.edit, size: 14, color: Colors.white))),
-          ]))),
-          const SizedBox(height: 7),
-          const Center(child: Text('Required profile photo', style: TextStyle(color: muted, fontSize: 11))),
-          const SizedBox(height: 18),
-          AnimatedSwitcher(duration: const Duration(milliseconds: 280), transitionBuilder: (child, a) => SlideTransition(position: Tween<Offset>(begin: const Offset(.04, 0), end: Offset.zero).animate(a), child: FadeTransition(opacity: a, child: child)), child: Column(key: ValueKey('$driver-$step'), children: [if (!driver || step == 0) ..._personalFields(), if (driver && step == 1) ..._drivingFields()])),
-          const SizedBox(height: 20),
-          SizedBox(height: 53, child: FilledButton(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), child: saving ? const CircularProgressIndicator(color: Colors.white) : Text(driver && step == 0 ? 'Continue' : 'Save and continue', style: const TextStyle(fontWeight: FontWeight.w700)))),
-          if (driver && step == 1) const Padding(padding: EdgeInsets.only(top: 12), child: Text('After these details, submit your licence and identity proof for secure admin review. Your driver account stays offline until approved.', style: TextStyle(color: muted, fontSize: 11, height: 1.45))),
-        ]),
+  State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
+}
+
+class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _picker = ImagePicker();
+
+  final _address = TextEditingController();
+  final _pincode = TextEditingController();
+  final _emergencyName = TextEditingController();
+  final _emergencyPhone = TextEditingController();
+
+  XFile? _photo;
+  String? _state;
+  String? _city;
+  bool _saving = false;
+
+  bool get _isDriver => widget.role.toUpperCase() == 'DRIVER';
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isDriver) {
+      // Drivers must never be stuck on the customer profile screen.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        replaceWith(context, DriverPersonalProfileScreen(name: widget.name));
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _address.dispose();
+    _pincode.dispose();
+    _emergencyName.dispose();
+    _emergencyPhone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final file = await _picker.pickImage(
+          source: source, maxWidth: 1400, imageQuality: 82);
+      if (file != null) setState(() => _photo = file);
+    } catch (_) {
+      if (mounted) {
+        showDmMessage(
+            context, 'Could not open the camera/gallery on this device.',
+            error: true);
+      }
+    }
+  }
+
+  void _chooseSource() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: panel,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: red),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickPhoto(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined, color: red),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickPhoto(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _progress() => Padding(padding: const EdgeInsets.only(bottom: 22), child: Row(children: [
-    Expanded(child: Container(height: 4, decoration: BoxDecoration(color: red, borderRadius: BorderRadius.circular(4)))),
-    if (driver) ...[const SizedBox(width: 7), Expanded(child: Container(height: 4, decoration: BoxDecoration(color: step == 1 ? red : Colors.white12, borderRadius: BorderRadius.circular(4))))],
-  ]));
-  List<Widget> _personalFields()=>[
-    if(driver)...[_dateTile('Date of birth',dob,birth:true),if(dob!=null&&!adult)const Padding(padding:EdgeInsets.only(top:7,bottom:8),child:Text('You must be 18 or older to register as a driver.',style:TextStyle(color:Color(0xFFFF6B6B),fontSize:12))),const SizedBox(height:13)],
-    TextFormField(controller:address,decoration:const InputDecoration(labelText:'Current address',prefixIcon:Icon(Icons.location_on_outlined)),validator:(v)=>requiredText(v,'Address')),const SizedBox(height:13),
-    TextFormField(controller:city,decoration:const InputDecoration(labelText:'City / service area',prefixIcon:Icon(Icons.location_city_outlined)),validator:(v)=>requiredText(v,'City')),const SizedBox(height:13),
-    TextFormField(controller:emergencyName,decoration:const InputDecoration(labelText:'Emergency contact name',prefixIcon:Icon(Icons.contact_emergency_outlined)),validator:(v)=>requiredText(v,'Emergency contact name')),const SizedBox(height:13),
-    TextFormField(controller:emergencyPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Emergency contact phone',prefixIcon:Icon(Icons.phone_outlined)),validator:(v)=>v==null||v.trim().length<8?'Enter a valid emergency phone':null),
-  ];
-  List<Widget> _drivingFields()=>[
-    TextFormField(controller:licence,decoration:const InputDecoration(labelText:'Driving licence number',prefixIcon:Icon(Icons.badge_outlined)),validator:(v)=>requiredText(v,'Licence number')),const SizedBox(height:13),
-    _dateTile('Licence expiry date',licenceExpiry,birth:false),const SizedBox(height:13),
-    TextFormField(controller:experience,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Driving experience (years)',prefixIcon:Icon(Icons.timelapse_outlined)),validator:(v)=>v==null||int.tryParse(v)==null||int.parse(v)<0?'Enter experience in years':null),const SizedBox(height:13),
-    TextFormField(controller:languages,decoration:const InputDecoration(labelText:'Languages known',prefixIcon:Icon(Icons.language)),validator:(v)=>requiredText(v,'Languages')),const SizedBox(height:13),
-    TextFormField(controller:intro,maxLines:3,maxLength:400,decoration:const InputDecoration(labelText:'Short introduction',alignLabelWithHint:true),validator:(v)=>requiredText(v,'Introduction')),const SizedBox(height:8),
-    const Align(alignment:Alignment.centerLeft,child:Text('Select your driving capabilities',style:TextStyle(fontWeight:FontWeight.w700,fontSize:14))),const SizedBox(height:7),
-    Wrap(spacing:7,runSpacing:1,children:skills.keys.map((key){final label={'manual_transmission':'Manual','automatic_transmission':'Automatic','sedan':'Sedan','suv':'SUV','luxury':'Luxury','highway':'Highway','night_driving':'Night driving','outstation':'Outstation'}[key]!;return FilterChip(label:Text(label),selected:skills[key]!,onSelected:(v)=>setState(()=>skills[key]=v),selectedColor:red.withOpacity(.2),checkmarkColor:red,backgroundColor:panel,side:const BorderSide(color:Colors.white12));}).toList()),
-  ];
-  Widget _dateTile(String label,DateTime? value,{required bool birth})=>InkWell(onTap:()=>pickDate(birth:birth),child:InputDecorator(decoration:InputDecoration(labelText:label,prefixIcon:const Icon(Icons.calendar_month_outlined),suffixIcon:const Icon(Icons.edit_calendar_outlined)),child:Text(value==null?'Select date':'${value.day.toString().padLeft(2,'0')}/${value.month.toString().padLeft(2,'0')}/${value.year}',style:TextStyle(color:value==null?muted:softWhite))));
+  Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
+    if (_photo == null) {
+      showDmMessage(context, 'Add a profile photo to continue.', error: true);
+      return;
+    }
+    if (_state == null || _city == null) {
+      showDmMessage(context, 'Select your state and city.', error: true);
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await AuthService.uploadProfilePhoto(_photo!.path);
+      final result = await AuthService.saveProfile({
+        'address': _address.text.trim(),
+        'state': _state,
+        'city': _city,
+        'pincode': _pincode.text.trim(),
+        'emergency_contact_name': _emergencyName.text.trim(),
+        'emergency_contact_phone': _emergencyPhone.text.trim(),
+      }, step: 'PROFILE');
+      if (!mounted) return;
+      final complete = result['profile_complete'] == true;
+      showDmMessage(
+          context,
+          complete
+              ? 'Profile complete. Welcome to DriveMate!'
+              : 'Profile saved.');
+      pushClean(context, HomeScreen(role: 'Customer', name: widget.name));
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      final missing = error.missingFields.isEmpty
+          ? ''
+          : '\n• ${error.missingFields.join('\n• ')}';
+      showDmMessage(context, '${error.message}$missing', error: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    final cities = IndiaLocations.citiesFor(_state);
+
+    return DmScreen(
+      showBack: true,
+      backFallback: LoginScreen(role: widget.role),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DmEntrance(
+              child: StepHeader(
+                step: 1,
+                total: 1,
+                eyebrow: 'Rider profile',
+                title: 'Complete your profile',
+                subtitle:
+                    'Photo, address and an emergency contact. All fields are required.',
+              ),
+            ),
+            const SizedBox(height: 24),
+            DmEntrance(
+                delay: 70,
+                child: _PhotoPicker(photo: _photo, onTap: _chooseSource)),
+            const SizedBox(height: 22),
+            DmEntrance(
+              delay: 120,
+              child: DmField(
+                controller: _address,
+                hint: 'House / street address',
+                icon: Icons.location_on_outlined,
+                maxLines: 2,
+                textInputAction: TextInputAction.next,
+                validator: (value) =>
+                    DmValidators.requiredText(value, 'Address'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DmEntrance(
+              delay: 160,
+              child: DmSelectField(
+                hint: 'State / Union Territory',
+                icon: Icons.map_outlined,
+                value: _state,
+                options: IndiaLocations.states,
+                searchHint: 'Search state',
+                validator: (value) =>
+                    _state == null ? 'State is required' : null,
+                onChanged: (value) => setState(() {
+                  _state = value;
+                  _city = null;
+                }),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DmEntrance(
+              delay: 200,
+              child: DmSelectField(
+                hint: 'City',
+                icon: Icons.location_city_outlined,
+                value: _city,
+                options: cities,
+                enabled: _state != null,
+                disabledHint: 'Select a state first',
+                searchHint: 'Search city',
+                validator: (value) => _city == null ? 'City is required' : null,
+                onChanged: (value) => setState(() => _city = value),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DmEntrance(
+              delay: 240,
+              child: DmField(
+                controller: _pincode,
+                hint: 'PIN code (6 digits)',
+                icon: Icons.pin_outlined,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textInputAction: TextInputAction.next,
+                validator: DmValidators.pincode,
+              ),
+            ),
+            const SizedBox(height: 12),
+            DmEntrance(
+              delay: 280,
+              child: DmField(
+                controller: _emergencyName,
+                hint: 'Emergency contact name',
+                icon: Icons.contact_emergency_outlined,
+                textInputAction: TextInputAction.next,
+                validator: (value) =>
+                    DmValidators.requiredText(value, 'Emergency contact name'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DmEntrance(
+              delay: 320,
+              child: DmField(
+                controller: _emergencyPhone,
+                hint: 'Emergency contact number',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.done,
+                validator: DmValidators.phone,
+              ),
+            ),
+            const SizedBox(height: 18),
+            DmEntrance(
+              delay: 360,
+              child: DmPrimaryButton(
+                  label: 'Save and continue',
+                  loading: _saving,
+                  onPressed: _save),
+            ),
+            const SizedBox(height: 14),
+            const DmEntrance(
+              delay: 400,
+              child: DmInfoBox(
+                text:
+                    'Your emergency contact is used only in a safety situation and is never shown to a driver.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Circular photo picker with a red "add" badge.
+class _PhotoPicker extends StatelessWidget {
+  final XFile? photo;
+  final VoidCallback onTap;
+  const _PhotoPicker({required this.photo, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return Center(
+      child: Column(
+        children: [
+          DmTapScale(
+            onTap: onTap,
+            scale: 0.94,
+            child: Stack(
+              children: [
+                Container(
+                  width: 108,
+                  height: 108,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: panel,
+                    border: Border.all(
+                        color: photo == null ? hairline : red,
+                        width: photo == null ? 1 : 2),
+                    image: photo == null
+                        ? null
+                        : DecorationImage(
+                            image: FileImage(File(photo!.path)),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                  child: photo == null
+                      ? const Icon(Icons.add_a_photo_outlined,
+                          color: red, size: 30)
+                      : null,
+                ),
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: red,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: navy, width: 2),
+                    ),
+                    child: const Icon(Icons.edit_rounded,
+                        size: 14, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text('Profile photo (required)', style: dmCaption(size: 11.5)),
+        ],
+      ),
+    );
+  }
 }

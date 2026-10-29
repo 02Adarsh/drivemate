@@ -1,62 +1,143 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
-import '../services/auth_service.dart';
-import 'onboarding_screen.dart';
 
+import '../services/auth_service.dart';
+import '../services/navigation.dart';
+import '../theme/dm_theme.dart';
+import '../utils/validators.dart';
+import '../widgets/dm_buttons.dart';
+import '../widgets/dm_feedback.dart';
+import '../widgets/dm_fields.dart';
+import '../widgets/dm_screen.dart';
+import 'login_screen.dart';
+
+/// Two-step password reset: request a code, then set a new password.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
-  @override State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final email = TextEditingController(), otp = TextEditingController(), password = TextEditingController();
-  int step = 0;
-  bool busy = false, obscure = true;
-  @override void dispose() { email.dispose(); otp.dispose(); password.dispose(); super.dispose(); }
 
-  Future<void> next() async {
-    if (email.text.trim().isEmpty || !email.text.contains('@')) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter the account email address.'))); return; }
-    if (step == 1 && (otp.text.length != 6 || password.text.length < 8)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter the 6-digit code and a password with at least 8 characters.'))); return; }
-    setState(() => busy = true);
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _otp = TextEditingController();
+  final _password = TextEditingController();
+
+  int _step = 0;
+  bool _busy = false;
+  bool _hide = true;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _otp.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _next() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _busy = true);
     try {
-      if (step == 0) {
-        await AuthService.requestPasswordReset(email.text.trim());
+      if (_step == 0) {
+        await AuthService.requestPasswordReset(_email.text.trim());
         if (!mounted) return;
-        setState(() => step = 1);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('If the account exists, a reset code has been sent.')));
+        setState(() => _step = 1);
+        showDmMessage(
+            context, 'If that account exists, a reset code has been sent.');
       } else {
-        await AuthService.confirmPasswordReset(email.text.trim(), otp.text.trim(), password.text);
+        await AuthService.confirmPasswordReset(
+            _email.text.trim(), _otp.text.trim(), _password.text);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed. Sign in with your new password.')));
-        Navigator.pop(context);
+        showDmMessage(
+            context, 'Password changed. Sign in with your new password.');
+        goBackOr(context, fallback: const LoginScreen());
       }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: red));
-    } finally { if (mounted) setState(() => busy = false); }
+    } on ApiException catch (error) {
+      if (mounted) showDmMessage(context, error.message, error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Stack(children: [
-      const Positioned.fill(child: CinematicBackdrop()),
-      SafeArea(child: Padding(padding: const EdgeInsets.all(23), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back)),
-        const SizedBox(height: 24),
-        const Icon(Icons.lock_reset_rounded, color: red, size: 42),
-        const SizedBox(height: 17),
-        Text(step == 0 ? 'Reset your password' : 'Create a new password', style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        Text(step == 0 ? 'We’ll email a secure one-time reset code.' : 'Enter the code sent to your email and choose a new password.', style: const TextStyle(color: muted, fontSize: 13, height: 1.5)),
-        const SizedBox(height: 23),
-        TextField(controller: email, enabled: step == 0, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email address', prefixIcon: Icon(Icons.email_outlined))),
-        if (step == 1) ...[
-          const SizedBox(height: 12),
-          TextField(controller: otp, maxLength: 6, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: '6-digit reset code', prefixIcon: Icon(Icons.password), counterText: '')),
-          const SizedBox(height: 12),
-          TextField(controller: password, obscureText: obscure, decoration: InputDecoration(labelText: 'New password', prefixIcon: const Icon(Icons.lock_outline), suffixIcon: IconButton(onPressed: () => setState(() => obscure = !obscure), icon: Icon(obscure ? Icons.visibility_off : Icons.visibility)))),
-        ],
-        const SizedBox(height: 20),
-        SizedBox(width: double.infinity, height: 52, child: FilledButton(onPressed: busy ? null : next, style: FilledButton.styleFrom(backgroundColor: red), child: busy ? const CircularProgressIndicator(color: Colors.white) : Text(step == 0 ? 'Send reset code' : 'Update password'))),
-      ]))),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    Theme.of(context); // Invalidate runtime palette when Light/Dark changes.
+    return DmScreen(
+      showBack: true,
+      backFallback: const LoginScreen(),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: red.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(Icons.lock_reset_rounded, color: red, size: 26),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              _step == 0 ? 'Reset your password' : 'Create a new password',
+              style: dmHeading(size: 26),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _step == 0
+                  ? 'We will email a one-time reset code to your registered address.'
+                  : 'Enter the code from your email and choose a new password.',
+              style: dmSubtitle(size: 13.2),
+            ),
+            const SizedBox(height: 24),
+            DmField(
+              controller: _email,
+              hint: 'Email address',
+              icon: Icons.mail_outline_rounded,
+              keyboardType: TextInputType.emailAddress,
+              enabled: _step == 0,
+              validator: DmValidators.email,
+            ),
+            if (_step == 1) ...[
+              const SizedBox(height: 12),
+              DmField(
+                controller: _otp,
+                hint: '6-digit reset code',
+                icon: Icons.password_rounded,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                validator: DmValidators.otp,
+              ),
+              const SizedBox(height: 12),
+              DmField(
+                controller: _password,
+                hint: 'New password',
+                icon: Icons.lock_outline_rounded,
+                obscure: _hide,
+                validator: DmValidators.password,
+                suffix: IconButton(
+                  onPressed: () => setState(() => _hide = !_hide),
+                  icon: Icon(
+                      _hide
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 19),
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+            DmPrimaryButton(
+              label: _step == 0 ? 'Send reset code' : 'Update password',
+              loading: _busy,
+              onPressed: _next,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

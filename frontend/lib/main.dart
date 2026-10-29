@@ -1,6 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'screens/splash_screen.dart';
-const navy=Color(0xFF080A0D), panel=Color(0xFF14171D), panel2=Color(0xFF1B2028), red=Color(0xFFF04444), softWhite=Color(0xFFF5F6F8), muted=Color(0xFF9BA3AE);
-void main()=>runApp(const DriveMateApp());
-class DriveMateApp extends StatelessWidget {const DriveMateApp({super.key});@override Widget build(BuildContext context)=>MaterialApp(title:'DriveMate',debugShowCheckedModeBanner:false,theme:ThemeData(brightness:Brightness.dark,scaffoldBackgroundColor:navy,colorScheme:const ColorScheme.dark(primary:red,secondary:red,surface:panel),textTheme:GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme).apply(bodyColor:softWhite,displayColor:softWhite),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:panel,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:const BorderSide(color:Color(0xFF292E37))),enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:const BorderSide(color:Color(0xFF292E37))),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:const BorderSide(color:red,width:1.5)),labelStyle:const TextStyle(color:muted),prefixIconColor:muted),appBarTheme:const AppBarTheme(backgroundColor:navy,foregroundColor:softWhite,elevation:0),useMaterial3:true),home:const SplashScreen());}
+import 'theme/dm_theme.dart';
+export 'theme/dm_theme.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await DmAppearance.instance.load();
+  runApp(const DriveMateApp());
+}
+
+/// DriveMate: a professional driver for the customer's own car.
+class DriveMateApp extends StatelessWidget {
+  const DriveMateApp({super.key});
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: DmAppearance.instance,
+        builder: (context, _) {
+          final dark = DmAppearance.instance.dark;
+          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+            systemNavigationBarColor: navy,
+            systemNavigationBarIconBrightness:
+                dark ? Brightness.light : Brightness.dark,
+          ));
+          return MaterialApp(
+            title: 'DriveMate',
+            debugShowCheckedModeBanner: false,
+            theme: buildDriveMateTheme(),
+            locale: Locale(DmAppearance.instance.language),
+            supportedLocales: const [Locale('en'), Locale('hi')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate
+            ],
+            home: const SplashScreen(),
+            builder: (context, child) {
+              final factor = DmAppearance.instance.largeText ? 1.15 : 1.0;
+              final scale = MediaQuery.textScalerOf(context).scale(1) * factor;
+              return MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                      textScaler: TextScaler.linear(scale.clamp(0.9, 1.5))),
+                  child: child!);
+            },
+          );
+        },
+      );
+}

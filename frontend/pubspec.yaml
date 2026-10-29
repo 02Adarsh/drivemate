@@ -1,24 +1,47 @@
 name: drivemate
-description: DriveMate driver-to-drive-your-own-car platform — phase 1 authentication.
+description: DriveMate — a verified professional driver comes to you and drives the car you own.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.7.1+9
 environment:
   sdk: '>=3.3.0 <4.0.0'
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   http: ^1.2.2
-  google_fonts: ^6.2.1
+  http_parser: ^4.0.2
   shared_preferences: ^2.3.2
   image_picker: ^1.1.2
   file_picker: ^13.1.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  geolocator: ^14.1.2
+  url_launcher: ^6.3.3
+  share_plus: ^13.3.1
+  path_provider: ^2.1.6
   cupertino_icons: ^1.0.8
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  url_launcher_platform_interface: ^2.3.2
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/drivemate_logo.png
-    - assets/images/night_drive.jpg
+    - assets/images/          # logo, backdrops and the v6 service photography
+  # Poppins is bundled with the app (SIL Open Font License, see assets/fonts/OFL.txt).
+  # Bundling avoids the runtime download that made text appear late / feel laggy.
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins-ExtraBold.ttf
+          weight: 800

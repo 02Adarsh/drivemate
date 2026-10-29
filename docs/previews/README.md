@@ -1,0 +1,1 @@
+V9 UI previews: Flutter-rendered screenshots with deterministic test fixtures (Adarsh, no real trips). These are design/QA previews, not physical-phone runs. Runtime app data always comes from the signed-in backend.
