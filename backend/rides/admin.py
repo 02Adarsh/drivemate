@@ -4,6 +4,7 @@ from django.contrib import admin
 from django import forms
 
 from .models import Booking, BookingDecline, BookingEvent, Notification, Vehicle, ServiceRate
+from .pricing import REQUIRES_EXPLICIT_RATE
 
 
 class ReadOnlyLedgerAdmin(admin.ModelAdmin):
@@ -63,7 +64,7 @@ class ServiceRateForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        if (self.instance.service in ('GETAWAY', 'EVENT') and data.get('enabled')
+        if (self.instance.service in REQUIRES_EXPLICIT_RATE and data.get('enabled')
                 and not data.get('base') and not data.get('per_hour')):
             raise forms.ValidationError('Set a base or hourly rate before enabling this service.')
         return data

@@ -50,6 +50,12 @@ class ExploreScreen extends StatelessWidget {
       Icons.celebration_outlined,
     ),
     (
+      'Corporate / Business Driver',
+      'Scheduled driver for business trips in your own car.',
+      'assets/images/svc_hourly.jpg',
+      Icons.business_center_outlined,
+    ),
+    (
       'Full day',
       'A longer driver package for your day.',
       'assets/images/svc_outstation.jpg',

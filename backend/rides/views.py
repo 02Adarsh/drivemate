@@ -21,7 +21,7 @@ from accounts.models import DriverProfile, User
 from .models import Booking, BookingDecline, Notification, Vehicle, ServiceRate, notify, notify_available_drivers
 from .models import TripStartCode, TripRating
 from .trip_security import issue_start_code, check_start_code, email_start_code
-from .pricing import PLATFORM_FEE_PERCENT, SERVICE_PRICING, fare_breakdown, platform_fee
+from .pricing import PLATFORM_FEE_PERCENT, REQUIRES_EXPLICIT_RATE, SERVICE_PRICING, fare_breakdown, platform_fee
 from .serializers import (
     AvailabilityInputSerializer, BookingInputSerializer, CancelInputSerializer, VehicleInputSerializer,
 )
@@ -183,7 +183,7 @@ class PricingView(RidesView):
         return Response({
             'services': [{**fare_breakdown(key, row['min_hours']), 'key': key}
                          for key, row in SERVICE_PRICING.items()
-                         if rates.get(key, key not in ('GETAWAY', 'EVENT'))],
+                         if rates.get(key, key not in REQUIRES_EXPLICIT_RATE)],
             'platform_fee_percent': PLATFORM_FEE_PERCENT,
             'currency': 'INR', 'payment_collection_live': False,
         })
@@ -325,7 +325,7 @@ class BookingListCreateView(RidesView):
                 booking = Booking(customer=request.user, vehicle=vehicle, business_label=business_label,
                                   vehicle_snapshot=vehicle_payload(vehicle), **data)
                 rate = ServiceRate.objects.select_for_update().filter(service=booking.service).first()
-                if (booking.service in (Booking.Service.GETAWAY, Booking.Service.EVENT) and rate is None) or (rate and not rate.enabled):
+                if (booking.service in REQUIRES_EXPLICIT_RATE and rate is None) or (rate and not rate.enabled):
                     raise ValidationError({'service': 'This service is not available. Please contact support.'})
                 booking.set_estimate()
                 if booking.estimated_fare > Decimal('9999999.99'):

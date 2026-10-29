@@ -404,10 +404,10 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
             value: '${booking.durationHours} hours',
             icon: Icons.timer_outlined,
           ),
-          if (booking.service == 'EVENT') ...[
+          if (booking.service == 'EVENT' || booking.service == 'CORPORATE') ...[
             Divider(color: dividerSoft, height: 14),
             DmInfoRow(
-              label: 'Event starts',
+              label: 'Starts',
               value: formatRideDateTime(booking.scheduledAt),
               icon: Icons.event,
             ),

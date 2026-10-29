@@ -100,6 +100,13 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       Icons.celebration_outlined,
     ),
     const _BookingService(
+      'CORPORATE',
+      'Corporate / Business Driver',
+      'Scheduled driver for business trips in your own car.',
+      'assets/images/svc_hourly.jpg',
+      Icons.business_center_outlined,
+    ),
+    const _BookingService(
       'FULL_DAY',
       'Full day',
       'Up to 12 hours',
@@ -150,6 +157,8 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   _BookingService get _service => _services[_serviceIndex];
   bool get _isGetaway => _service.key == 'GETAWAY';
   bool get _isEvent => _service.key == 'EVENT';
+  bool get _requiresSchedule =>
+      _isGetaway || _isEvent || _service.key == 'CORPORATE';
 
   @override
   void initState() {
@@ -160,7 +169,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
         (service) => service.label.toLowerCase() == initial.toLowerCase(),
       );
       if (index >= 0) _serviceIndex = index;
-      if (_isGetaway || _isEvent) _scheduleLater = true;
+      if (_requiresSchedule) _scheduleLater = true;
     }
     _pickupPlace = widget.initialPickup;
     if (_pickupPlace != null) _pickup.text = _pickupPlace!.address;
@@ -306,9 +315,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     final perHour = (row['per_hour'] as num?)?.toInt();
     final minimum = (row['minimum_hours'] as num?)?.toInt();
     if (base == null || perHour == null || minimum == null) {
-      return service.key == 'GETAWAY' || service.key == 'EVENT'
-          ? 'Unavailable — admin rate not set'
-          : 'Price from the server';
+      return _pricingRows.isEmpty
+          ? 'Price from the server'
+          : 'Unavailable — admin rate not set';
     }
     return 'from ₹${base + perHour * minimum}';
   }
@@ -825,7 +834,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const DmSectionLabel('Timing'),
-            if (!_isGetaway && !_isEvent)
+            if (!_requiresSchedule)
               DmOptionRow(
                 label: 'Now',
                 caption: 'No guaranteed arrival time',
@@ -833,7 +842,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                 selected: !_scheduleLater,
                 onTap: () => setState(() => _scheduleLater = false),
               ),
-            if (!_isGetaway && !_isEvent)
+            if (!_requiresSchedule)
               DmOptionRow(
                 label: 'Schedule for later',
                 caption: 'Up to 60 days ahead',
@@ -842,8 +851,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                 onTap: () => setState(() => _scheduleLater = true),
               ),
             if (_scheduleLater) ...[
-              if (_isGetaway || _isEvent)
-                const DmSectionLabel('Start date & time'),
+              if (_requiresSchedule) const DmSectionLabel('Start date & time'),
               const SizedBox(height: 6),
               GestureDetector(
                 onTap: _pickDateTime,
@@ -1191,7 +1199,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
     return DmTapScale(
       onTap: () => setState(() {
         _serviceIndex = index;
-        if (_isGetaway || _isEvent) _scheduleLater = true;
+        if (_requiresSchedule) _scheduleLater = true;
         _normaliseDuration();
       }),
       borderRadius: BorderRadius.circular(radiusCard),
