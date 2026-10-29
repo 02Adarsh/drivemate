@@ -70,7 +70,7 @@ def eligible_requests(profile):
     if not profile.night_driving:
         qs = qs.exclude(service=Booking.Service.NIGHT)
     if not profile.outstation:
-        qs = qs.exclude(service__in=[Booking.Service.OUTSTATION, Booking.Service.GETAWAY])
+        qs = qs.exclude(service__in=[Booking.Service.OUTSTATION, Booking.Service.GETAWAY, Booking.Service.PILGRIMAGE])
     return qs.select_related('customer', 'driver', 'vehicle').prefetch_related('events')
 
 

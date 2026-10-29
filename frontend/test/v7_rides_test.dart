@@ -421,6 +421,61 @@ void main() {
     await disposeUi(tester);
   });
 
+  testWidgets('pilgrimage is unavailable until admin enables its rate', (
+    tester,
+  ) async {
+    await screen(
+      tester,
+      const BookDriverScreen(name: 'Adarsh', initialService: 'Pilgrimage Trip'),
+    );
+    expect(find.text('Unavailable — admin rate not set'), findsWidgets);
+    expect(
+      find.text('Service unavailable until admin enables its rate'),
+      findsOneWidget,
+    );
+    await disposeUi(tester);
+  });
+
+  testWidgets('pilgrimage booking sends choices, not a client price', (
+    tester,
+  ) async {
+    api.pilgrimageEnabled = true;
+    api.cars = [carFixture()];
+    await screen(
+      tester,
+      const BookDriverScreen(name: 'Adarsh', initialService: 'Pilgrimage Trip'),
+    );
+    await tap(tester, 'Continue');
+    expect(find.text('START DATE & TIME'), findsOneWidget);
+    await tap(tester, 'Pick date & time');
+    await tap(tester, 'OK');
+    await tap(tester, 'OK');
+    await tap(tester, 'Continue');
+    await pickupPin(tester);
+    await tap(tester, 'Choose destination on map');
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'Sector 15 metro gate',
+    );
+    await settle(tester);
+    await tester.tap(find.byTooltip('Search places'));
+    await settle(tester);
+    await tester.tap(find.text('Sector 15, near the metro gate').first);
+    await settle(tester);
+    await tap(tester, 'Confirm location');
+    await tap(tester, 'Continue');
+    await tap(tester, 'Continue');
+    expect(find.text('₹600'), findsWidgets);
+    await tap(tester, 'Request a driver');
+    await tap(tester, 'Send request to drivers');
+    expect(api.lastBookingPost!['service'], 'PILGRIMAGE');
+    expect(api.lastBookingPost!['duration_hours'], 4);
+    expect(api.lastBookingPost!.containsKey('estimated_fare'), isFalse);
+    expect(DateTime.tryParse(api.lastBookingPost!['scheduled_at']), isNotNull);
+    expect(api.lastBookingPost!['drop_latitude'], isNotNull);
+    await disposeUi(tester);
+  });
+
   testWidgets(
     'full-day duration respects the server minimum rather than a misleading two-hour quote',
     (tester) async {

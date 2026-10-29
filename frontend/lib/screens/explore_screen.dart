@@ -56,6 +56,12 @@ class ExploreScreen extends StatelessWidget {
       Icons.business_center_outlined,
     ),
     (
+      'Pilgrimage Trip',
+      'A driver for your pilgrimage, in your own car.',
+      'assets/images/svc_outstation.jpg',
+      Icons.temple_hindu_outlined,
+    ),
+    (
       'Full day',
       'A longer driver package for your day.',
       'assets/images/svc_outstation.jpg',

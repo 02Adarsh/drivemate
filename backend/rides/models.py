@@ -125,6 +125,7 @@ class Booking(models.Model):
         OUTSTATION = 'OUTSTATION', 'Outstation'
         GETAWAY = 'GETAWAY', 'Outstation Getaways'
         EVENT = 'EVENT', 'Wedding / Event Driver'
+        PILGRIMAGE = 'PILGRIMAGE', 'Pilgrimage Trip'
         CORPORATE = 'CORPORATE', 'Corporate / Business Driver'
         NIGHT = 'NIGHT', 'Night drive'
 
@@ -327,7 +328,7 @@ def notify_available_drivers(booking: Booking, limit: int = 50) -> int:
         profiles = profiles.filter(**{capability: True})
     if booking.service == Booking.Service.NIGHT:
         profiles = profiles.filter(night_driving=True)
-    if booking.service in (Booking.Service.OUTSTATION, Booking.Service.GETAWAY):
+    if booking.service in (Booking.Service.OUTSTATION, Booking.Service.GETAWAY, Booking.Service.PILGRIMAGE):
         profiles = profiles.filter(outstation=True)
     rows = [Notification(
         user_id=profile.user_id, title='New booking request',

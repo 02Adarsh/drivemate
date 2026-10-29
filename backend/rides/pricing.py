@@ -25,11 +25,12 @@ SERVICE_PRICING: dict[str, dict[str, object]] = {
     # Disabled until an administrator configures an explicit price.
     'GETAWAY': {'label': 'Outstation Getaways', 'base': 0, 'per_hour': 0, 'min_hours': 1},
     'EVENT': {'label': 'Wedding / Event Driver', 'base': 0, 'per_hour': 0, 'min_hours': 1},
+    'PILGRIMAGE': {'label': 'Pilgrimage Trip', 'base': 0, 'per_hour': 0, 'min_hours': 1},
     'CORPORATE': {'label': 'Corporate / Business Driver', 'base': 0, 'per_hour': 0, 'min_hours': 1},
 }
 
-REQUIRES_EXPLICIT_RATE = {'GETAWAY', 'EVENT', 'CORPORATE'}
-SCHEDULE_REQUIRED_SERVICES = {'EVENT', 'CORPORATE'}
+REQUIRES_EXPLICIT_RATE = {'GETAWAY', 'EVENT', 'CORPORATE', 'PILGRIMAGE'}
+SCHEDULE_REQUIRED_SERVICES = {'EVENT', 'CORPORATE', 'PILGRIMAGE'}
 
 MAX_HOURS = 14
 GETAWAY_MAX_HOURS = 744

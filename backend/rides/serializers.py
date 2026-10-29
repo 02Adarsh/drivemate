@@ -88,8 +88,8 @@ class BookingInputSerializer(serializers.Serializer):
         minimum = SERVICE_PRICING[service]['min_hours']
         if data['duration_hours'] < minimum:
             raise serializers.ValidationError({'duration_hours': f'{minimum} hours minimum for this service.'})
-        if service in (Booking.Service.OUTSTATION, Booking.Service.GETAWAY) and (len(data['drop_address']) < 4 or data.get('drop_latitude') is None or data.get('drop_longitude') is None):
-            raise serializers.ValidationError({'drop_address': 'Enter the outstation destination.'})
+        if service in (Booking.Service.OUTSTATION, Booking.Service.GETAWAY, Booking.Service.PILGRIMAGE) and (len(data['drop_address']) < 4 or data.get('drop_latitude') is None or data.get('drop_longitude') is None):
+            raise serializers.ValidationError({'drop_address': 'Enter a destination for this service.'})
         return data
 
 

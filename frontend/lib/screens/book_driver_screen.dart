@@ -107,6 +107,13 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       Icons.business_center_outlined,
     ),
     const _BookingService(
+      'PILGRIMAGE',
+      'Pilgrimage Trip',
+      'A driver for your pilgrimage, in your own car.',
+      'assets/images/svc_outstation.jpg',
+      Icons.temple_hindu_outlined,
+    ),
+    const _BookingService(
       'FULL_DAY',
       'Full day',
       'Up to 12 hours',
@@ -158,7 +165,10 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
   bool get _isGetaway => _service.key == 'GETAWAY';
   bool get _isEvent => _service.key == 'EVENT';
   bool get _requiresSchedule =>
-      _isGetaway || _isEvent || _service.key == 'CORPORATE';
+      _isGetaway ||
+      _isEvent ||
+      _service.key == 'CORPORATE' ||
+      _service.key == 'PILGRIMAGE';
 
   @override
   void initState() {
@@ -366,7 +376,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
       case 2:
         return _pickupPlace != null &&
             _pickup.text.trim().length >= 4 &&
-            (!(_service.key == 'OUTSTATION' || _isGetaway) ||
+            (!(_service.key == 'OUTSTATION' ||
+                    _isGetaway ||
+                    _service.key == 'PILGRIMAGE') ||
                 (_dropPlace != null && _drop.text.trim().length >= 4));
       case 3:
         return _vehicle?.id != null &&
@@ -532,7 +544,9 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                     icon: Icons.event_available,
                   ),
                 ],
-                if (_service.key == 'OUTSTATION' || _isGetaway) ...[
+                if (_service.key == 'OUTSTATION' ||
+                    _isGetaway ||
+                    _service.key == 'PILGRIMAGE') ...[
                   Divider(color: dividerSoft, height: 18),
                   DmInfoRow(
                     label: 'Drop',
@@ -950,15 +964,21 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
             const SizedBox(height: 14),
             DmOptionRow(
               label: 'Choose destination on map',
-              caption: (_service.key == 'OUTSTATION' || _isGetaway)
-                  ? 'Required for outstation'
+              caption:
+                  (_service.key == 'OUTSTATION' ||
+                      _isGetaway ||
+                      _service.key == 'PILGRIMAGE')
+                  ? 'Required for this service'
                   : 'Optional destination pin',
               icon: Icons.flag_outlined,
               onTap: () => _pickPlace(false),
             ),
             DmField(
               controller: _drop,
-              hint: (_service.key == 'OUTSTATION' || _isGetaway)
+              hint:
+                  (_service.key == 'OUTSTATION' ||
+                      _isGetaway ||
+                      _service.key == 'PILGRIMAGE')
                   ? 'Destination city'
                   : 'Destination (optional)',
               icon: Icons.place_outlined,
@@ -1321,7 +1341,7 @@ class _BookDriverScreenState extends State<BookDriverScreen> {
                         ? 'Choose a pickup pin on the map to continue'
                         : _pickup.text.trim().length < 4
                         ? 'Enter a pickup address to continue'
-                        : 'Enter the outstation destination')
+                        : 'Choose the required destination')
                   : _step == 3
                   ? 'Choose a car to continue'
                   : (_isGetaway
