@@ -183,7 +183,7 @@ class PricingView(RidesView):
         return Response({
             'services': [{**fare_breakdown(key, row['min_hours']), 'key': key}
                          for key, row in SERVICE_PRICING.items()
-                         if rates.get(key, key != 'GETAWAY')],
+                         if rates.get(key, key not in ('GETAWAY', 'EVENT'))],
             'platform_fee_percent': PLATFORM_FEE_PERCENT,
             'currency': 'INR', 'payment_collection_live': False,
         })
@@ -325,7 +325,7 @@ class BookingListCreateView(RidesView):
                 booking = Booking(customer=request.user, vehicle=vehicle, business_label=business_label,
                                   vehicle_snapshot=vehicle_payload(vehicle), **data)
                 rate = ServiceRate.objects.select_for_update().filter(service=booking.service).first()
-                if (booking.service == Booking.Service.GETAWAY and rate is None) or (rate and not rate.enabled):
+                if (booking.service in (Booking.Service.GETAWAY, Booking.Service.EVENT) and rate is None) or (rate and not rate.enabled):
                     raise ValidationError({'service': 'This service is not available. Please contact support.'})
                 booking.set_estimate()
                 if booking.estimated_fare > Decimal('9999999.99'):

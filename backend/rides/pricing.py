@@ -24,6 +24,7 @@ SERVICE_PRICING: dict[str, dict[str, object]] = {
     'NIGHT': {'label': 'Night drive', 'base': 129, 'per_hour': 139, 'min_hours': 2},
     # Disabled until an administrator configures an explicit price.
     'GETAWAY': {'label': 'Outstation Getaways', 'base': 0, 'per_hour': 0, 'min_hours': 1},
+    'EVENT': {'label': 'Wedding / Event Driver', 'base': 0, 'per_hour': 0, 'min_hours': 1},
 }
 
 MAX_HOURS = 14

@@ -124,6 +124,7 @@ class Booking(models.Model):
         AIRPORT = 'AIRPORT', 'Airport'
         OUTSTATION = 'OUTSTATION', 'Outstation'
         GETAWAY = 'GETAWAY', 'Outstation Getaways'
+        EVENT = 'EVENT', 'Wedding / Event Driver'
         NIGHT = 'NIGHT', 'Night drive'
 
     customer = models.ForeignKey(

@@ -63,9 +63,9 @@ class ServiceRateForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        if (self.instance.service == 'GETAWAY' and data.get('enabled')
+        if (self.instance.service in ('GETAWAY', 'EVENT') and data.get('enabled')
                 and not data.get('base') and not data.get('per_hour')):
-            raise forms.ValidationError('Set a base or hourly rate before enabling Outstation Getaways.')
+            raise forms.ValidationError('Set a base or hourly rate before enabling this service.')
         return data
 
 

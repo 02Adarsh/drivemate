@@ -74,6 +74,7 @@ class ApiFixture {
   final bool approved;
   bool online;
   bool getawayEnabled = false;
+  bool eventEnabled = false;
   List<Map<String, dynamic>> cars;
   List<Map<String, dynamic>> bookings;
   List<Map<String, dynamic>> notifications = [];
@@ -366,6 +367,7 @@ class ApiFixture {
           price('OUTSTATION', 249, 149, 6),
           price('NIGHT', 129, 139, 2),
           if (getawayEnabled) price('GETAWAY', 250, 125, 1),
+          if (eventEnabled) price('EVENT', 200, 100, 1),
         ],
         'platform_fee_percent': 18
       });

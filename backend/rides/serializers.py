@@ -67,6 +67,8 @@ class BookingInputSerializer(serializers.Serializer):
         if phone and not re.fullmatch(r'\+?[0-9]{10,15}',phone):
             raise serializers.ValidationError({'passenger_phone':'Enter a complete mobile number.'})
         service = data['service']
+        if service == Booking.Service.EVENT and not data.get('scheduled_at'):
+            raise serializers.ValidationError({'scheduled_at': 'Choose a future start date and time for the event.'})
         if service == Booking.Service.GETAWAY:
             start, end = data.get('scheduled_at'), data.get('return_at')
             if not start or not end:

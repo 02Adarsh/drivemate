@@ -222,7 +222,7 @@ void main() {
         tester,
         const BookDriverScreen(
             name: 'Adarsh', initialService: 'Outstation Getaways'));
-    expect(find.text('Unavailable — admin rate not set'), findsOneWidget);
+    expect(find.text('Unavailable — admin rate not set'), findsWidgets);
     expect(find.text('Service unavailable until admin enables its rate'),
         findsOneWidget);
     await disposeUi(tester);
@@ -268,6 +268,47 @@ void main() {
     expect(api.lastBookingPost!['duration_hours'], 20);
     expect(DateTime.tryParse(api.lastBookingPost!['scheduled_at']), isNotNull);
     expect(DateTime.tryParse(api.lastBookingPost!['return_at']), isNotNull);
+    expect(api.lastBookingPost!.containsKey('estimated_fare'), isFalse);
+    await disposeUi(tester);
+  });
+
+  testWidgets('event service is unavailable until admin enables a rate',
+      (tester) async {
+    await screen(
+        tester,
+        const BookDriverScreen(
+            name: 'Adarsh', initialService: 'Wedding / Event Driver'));
+    expect(find.text('Unavailable — admin rate not set'), findsWidgets);
+    expect(find.text('Service unavailable until admin enables its rate'),
+        findsOneWidget);
+    await disposeUi(tester);
+  });
+
+  testWidgets(
+      'event booking requires scheduled start and sends server-priced request',
+      (tester) async {
+    api.eventEnabled = true;
+    api.cars = [carFixture()];
+    await screen(
+        tester,
+        const BookDriverScreen(
+            name: 'Adarsh', initialService: 'Wedding / Event Driver'));
+    await tap(tester, 'Continue');
+    expect(find.text('START DATE & TIME'), findsOneWidget);
+    expect(find.text('Now'), findsNothing);
+    await tap(tester, 'Pick date & time');
+    await tap(tester, 'OK');
+    await tap(tester, 'OK');
+    await tap(tester, 'Continue');
+    await pickupPin(tester);
+    await tap(tester, 'Continue');
+    await tap(tester, 'Continue');
+    expect(find.text('₹600'), findsWidgets);
+    await tap(tester, 'Request a driver');
+    await tap(tester, 'Send request to drivers');
+    expect(api.lastBookingPost!['service'], 'EVENT');
+    expect(api.lastBookingPost!['duration_hours'], 4);
+    expect(DateTime.tryParse(api.lastBookingPost!['scheduled_at']), isNotNull);
     expect(api.lastBookingPost!.containsKey('estimated_fare'), isFalse);
     await disposeUi(tester);
   });

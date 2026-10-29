@@ -22,11 +22,12 @@ class DriverRequestsScreen extends StatefulWidget {
   final bool approved;
   final bool online;
   final Future<void> Function(bool)? onToggleOnline;
-  const DriverRequestsScreen(
-      {super.key,
-      required this.approved,
-      required this.online,
-      this.onToggleOnline});
+  const DriverRequestsScreen({
+    super.key,
+    required this.approved,
+    required this.online,
+    this.onToggleOnline,
+  });
 
   @override
   State<DriverRequestsScreen> createState() => _DriverRequestsScreenState();
@@ -114,14 +115,19 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
       final accepted = await RidesService.acceptRequest(booking.id);
       if (!mounted) return;
       setState(() => _busyId = 0);
-      showDmMessage(context,
-          '${accepted.customer?.name ?? "The customer"} is now your trip.');
+      showDmMessage(
+        context,
+        '${accepted.customer?.name ?? "The customer"} is now your trip.',
+      );
       setState(() {
         _tab = 1;
-        _trips = BookingList(active: [
-          accepted,
-          ..._trips.active.where((t) => t.id != accepted.id)
-        ], past: _trips.past);
+        _trips = BookingList(
+          active: [
+            accepted,
+            ..._trips.active.where((t) => t.id != accepted.id),
+          ],
+          past: _trips.past,
+        );
         _requests = _requests.where((r) => r.id != accepted.id).toList();
       });
       await _load();
@@ -151,8 +157,13 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
 
   Future<void> _open(BookingModel booking) async {
     await Navigator.of(context).push(
-      dmRoute(BookingDetailScreen(
-          bookingId: booking.id, initial: booking, isDriver: true)),
+      dmRoute(
+        BookingDetailScreen(
+          bookingId: booking.id,
+          initial: booking,
+          isDriver: true,
+        ),
+      ),
     );
     await _load();
   }
@@ -171,8 +182,9 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
                 children: [
                   Expanded(child: Text('Requests', style: dmHeading(size: 25))),
                   DmPill(
-                    label:
-                        widget.approved && widget.online ? 'ONLINE' : 'OFFLINE',
+                    label: widget.approved && widget.online
+                        ? 'ONLINE'
+                        : 'OFFLINE',
                     color: widget.approved && widget.online ? success : muted,
                     solid: widget.approved && widget.online,
                   ),
@@ -180,8 +192,9 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
               ),
               const SizedBox(height: 5),
               Text(
-                  'Eligible requests. Auto-refreshes every 8 seconds in the foreground.',
-                  style: dmSubtitle(size: 13)),
+                'Eligible requests. Auto-refreshes every 8 seconds in the foreground.',
+                style: dmSubtitle(size: 13),
+              ),
               const SizedBox(height: 14),
               DmSegmentTabs(
                 tabs: _tabs,
@@ -225,8 +238,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
           DmEmptyState(
             icon: Icons.bolt_outlined,
             title: 'No requests yet',
-            body:
-                'Nothing is simulated here: the feed stays empty until your account is approved.',
+            body: 'Nothing is simulated here: the feed stays empty until your account is approved.',
           ),
         ],
       );
@@ -240,8 +252,7 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
           DmListCard(
             icon: Icons.power_settings_new_rounded,
             title: 'You are offline',
-            body:
-                'Go online to see and accept requests. The server only offers work to online drivers.',
+            body: 'Go online to see and accept requests. The server only offers work to online drivers.',
             accent: warning,
             onTap: () async {
               await widget.onToggleOnline?.call(true);
@@ -274,9 +285,10 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
         children: [
           const SizedBox(height: 50),
           DmErrorState(
-              title: 'Could not load your requests',
-              message: _error!,
-              onRetry: _load),
+            title: 'Could not load your requests',
+            message: _error!,
+            onRetry: _load,
+          ),
         ],
       );
     }
@@ -289,17 +301,19 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
     if (_requests.isEmpty && _trips.active.isNotEmpty) {
       final active = _trips.active.first;
       return ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            DmListCard(
-                icon: Icons.route_rounded,
-                title: 'Finish your active trip',
-                body:
-                    'Booking #${active.id} is ${active.statusLabel.toLowerCase()}. Only one trip at a time is allowed.',
-                accent: info,
-                onTap: () => _open(active)),
-          ]);
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        children: [
+          DmListCard(
+            icon: Icons.route_rounded,
+            title: 'Finish your active trip',
+            body:
+                'Booking #${active.id} is ${active.statusLabel.toLowerCase()}. Only one trip at a time is allowed.',
+            accent: info,
+            onTap: () => _open(active),
+          ),
+        ],
+      );
     }
     if (_requests.isEmpty) {
       return ListView(
@@ -317,8 +331,9 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
       );
     }
     return ListView.separated(
-      physics:
-          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
       itemCount: _requests.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -334,7 +349,10 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: dmGradientSurface(
-          accent: red, radius: radiusCard + 2, strength: 0.14),
+        accent: red,
+        radius: radiusCard + 2,
+        strength: 0.14,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -346,18 +364,23 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(booking.customer?.name ?? 'Customer',
-                        style: const TextStyle(
-                            fontSize: 14.2, fontWeight: FontWeight.w700)),
+                    Text(
+                      booking.customer?.name ?? 'Customer',
+                      style: const TextStyle(
+                        fontSize: 14.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 3),
                     Text(booking.serviceLabel, style: dmCaption(size: 11.2)),
                   ],
                 ),
               ),
               DmPill(
-                  label: dmMoney(booking.estimatedFare),
-                  color: success,
-                  solid: true),
+                label: dmMoney(booking.estimatedFare),
+                color: success,
+                solid: true,
+              ),
             ],
           ),
           const SizedBox(height: 13),
@@ -371,34 +394,56 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
             Divider(color: dividerSoft, height: 14),
           ],
           DmInfoRow(
-              label: 'Pickup',
-              value: booking.pickup,
-              icon: Icons.my_location_rounded),
+            label: 'Pickup',
+            value: booking.pickup,
+            icon: Icons.my_location_rounded,
+          ),
           Divider(color: dividerSoft, height: 14),
           DmInfoRow(
-              label: 'Duration',
-              value: '${booking.durationHours} hours',
-              icon: Icons.timer_outlined),
+            label: 'Duration',
+            value: '${booking.durationHours} hours',
+            icon: Icons.timer_outlined,
+          ),
+          if (booking.service == 'EVENT') ...[
+            Divider(color: dividerSoft, height: 14),
+            DmInfoRow(
+              label: 'Event starts',
+              value: formatRideDateTime(booking.scheduledAt),
+              icon: Icons.event,
+            ),
+            if (booking.dropAddress.isNotEmpty) ...[
+              Divider(color: dividerSoft, height: 14),
+              DmInfoRow(
+                label: 'Destination',
+                value: booking.dropAddress,
+                icon: Icons.flag_outlined,
+              ),
+            ],
+          ],
           if (booking.service == 'GETAWAY') ...[
             Divider(color: dividerSoft, height: 14),
             DmInfoRow(
-                label: 'Destination',
-                value: booking.dropAddress,
-                icon: Icons.flag_outlined),
+              label: 'Destination',
+              value: booking.dropAddress,
+              icon: Icons.flag_outlined,
+            ),
             Divider(color: dividerSoft, height: 14),
             DmInfoRow(
-                label: 'Starts',
-                value: formatRideDateTime(booking.scheduledAt),
-                icon: Icons.event),
+              label: 'Starts',
+              value: formatRideDateTime(booking.scheduledAt),
+              icon: Icons.event,
+            ),
             Divider(color: dividerSoft, height: 14),
             DmInfoRow(
-                label: 'Return',
-                value: formatRideDateTime(booking.returnAt),
-                icon: Icons.event_available),
+              label: 'Return',
+              value: formatRideDateTime(booking.returnAt),
+              icon: Icons.event_available,
+            ),
             const SizedBox(height: 8),
             Text(
-                'Fuel, tolls, parking and driver stay/food are paid separately by customer.',
-                style: dmCaption(size: 11)),
+              'Fuel, tolls, parking and driver stay/food are paid separately by customer.',
+              style: dmCaption(size: 11),
+            ),
           ],
           Divider(color: dividerSoft, height: 14),
           DmInfoRow(
@@ -410,16 +455,19 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
           if (booking.notes.isNotEmpty) ...[
             Divider(color: dividerSoft, height: 14),
             DmInfoRow(
-                label: 'Notes',
-                value: booking.notes,
-                icon: Icons.sticky_note_2_outlined),
+              label: 'Notes',
+              value: booking.notes,
+              icon: Icons.sticky_note_2_outlined,
+            ),
           ],
           const SizedBox(height: 15),
           if (busy)
             const Center(
-                child: Padding(
-                    padding: EdgeInsets.all(10),
-                    child: CircularProgressIndicator()))
+              child: Padding(
+                padding: EdgeInsets.all(10),
+                child: CircularProgressIndicator(),
+              ),
+            )
           else
             Row(
               children: [
@@ -428,9 +476,13 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
                     height: 48,
                     child: OutlinedButton(
                       onPressed: () => _decline(booking),
-                      child: const Text('Decline',
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w700)),
+                      child: const Text(
+                        'Decline',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -441,9 +493,13 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
                     height: 48,
                     child: FilledButton(
                       onPressed: () => _accept(booking),
-                      child: const Text('Accept request',
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w700)),
+                      child: const Text(
+                        'Accept request',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -471,8 +527,9 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
       );
     }
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
       children: [
         if (_trips.active.isNotEmpty) ...[
@@ -485,8 +542,10 @@ class _DriverRequestsScreenState extends State<DriverRequestsScreen>
         ],
         const DmSectionHeader(title: 'History'),
         if (_trips.past.isEmpty)
-          Text('Completed trips will be listed here.',
-              style: dmCaption(size: 11.6))
+          Text(
+            'Completed trips will be listed here.',
+            style: dmCaption(size: 11.6),
+          )
         else
           for (final trip in _trips.past) ...[
             _TripCard(booking: trip, onTap: () => _open(trip), compact: true),
@@ -503,8 +562,11 @@ class _TripCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool compact;
 
-  const _TripCard(
-      {required this.booking, required this.onTap, this.compact = false});
+  const _TripCard({
+    required this.booking,
+    required this.onTap,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -514,8 +576,9 @@ class _TripCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(radiusCard + 2),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration:
-            dmSurface(border: booking.statusColor.withValues(alpha: 0.32)),
+        decoration: dmSurface(
+          border: booking.statusColor.withValues(alpha: 0.32),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -525,29 +588,36 @@ class _TripCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                      '#${booking.id} · ${booking.customer?.name ?? "Customer"}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13.8, fontWeight: FontWeight.w700)),
+                    '#${booking.id} · ${booking.customer?.name ?? "Customer"}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.8,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 Flexible(
-                    child: DmPill(
-                        label: booking.statusLabel,
-                        color: booking.statusColor)),
+                  child: DmPill(
+                    label: booking.statusLabel,
+                    color: booking.statusColor,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             DmInfoRow(
-                label: 'Pickup',
-                value: booking.pickup,
-                icon: Icons.my_location_rounded),
+              label: 'Pickup',
+              value: booking.pickup,
+              icon: Icons.my_location_rounded,
+            ),
             if (!compact) ...[
               Divider(color: dividerSoft, height: 14),
               DmInfoRow(
-                  label: 'Service',
-                  value: booking.serviceLabel,
-                  icon: Icons.local_taxi_outlined),
+                label: 'Service',
+                value: booking.serviceLabel,
+                icon: Icons.local_taxi_outlined,
+              ),
               Divider(color: dividerSoft, height: 14),
               DmInfoRow(
                 label: 'Payout',
@@ -561,8 +631,11 @@ class _TripCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                      child: Text('Tap to open the trip controls',
-                          style: dmCaption(size: 10.8))),
+                    child: Text(
+                      'Tap to open the trip controls',
+                      style: dmCaption(size: 10.8),
+                    ),
+                  ),
                   Icon(Icons.chevron_right_rounded, size: 19, color: muted),
                 ],
               ),
